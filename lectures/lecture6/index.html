@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UniFilter AI v2 — 大学生向けメールダッシュボード</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-base:      #0f1117;
+      --bg-surface:   #1a1d27;
+      --bg-elevated:  #22263a;
+      --bg-hover:     #2a2f47;
+      --border:       #2e3350;
+      --accent:       #6c63ff;
+      --accent-glow:  rgba(108, 99, 255, 0.25);
+      --important:    #ff6b6b;
+      --important-bg: rgba(255, 107, 107, 0.12);
+      --system:       #4a9eff;
+      --system-bg:    rgba(74, 158, 255, 0.08);
+      --green:        #43d9a2;
+      --yellow:       #ffd166;
+      --text-primary: #e8eaf6;
+      --text-secondary:#9399b5;
+      --text-muted:   #5c617c;
+      --radius-sm:    8px;
+      --radius-md:    12px;
+      --radius-lg:    18px;
+      --shadow:       0 4px 24px rgba(0,0,0,0.4);
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Inter', 'Hiragino Kaku Gothic ProN', sans-serif;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* ===== Layout ===== */
+    .app {
+      display: grid;
+      grid-template-columns: 220px 1fr 320px;
+      grid-template-rows: 56px 1fr;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ===== Topbar ===== */
+    .topbar {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 20px;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+      z-index: 10;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+    .logo-icon {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, var(--accent), #9c27b0);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+    }
+    .v2-badge {
+      background: linear-gradient(135deg, #ffd166, #ff9f43);
+      color: #1a1d27;
+      border-radius: 6px;
+      padding: 2px 7px;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+    }
+    .search-bar {
+      flex: 1;
+      max-width: 480px;
+      position: relative;
+    }
+    .search-bar input {
+      width: 100%;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 7px 14px 7px 36px;
+      color: var(--text-primary);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-bar input:focus { border-color: var(--accent); }
+    .search-bar input::placeholder { color: var(--text-muted); }
+    .search-icon {
+      position: absolute;
+      left: 10px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: auto;
+    }
+    .ai-badge {
+      display: flex; align-items: center; gap: 5px;
+      background: var(--accent-glow);
+      border: 1px solid var(--accent);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 12px;
+      color: #a89fff;
+      font-weight: 500;
+    }
+    .ai-dot {
+      width: 6px; height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+    .avatar {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), #9c27b0);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* ===== Sidebar ===== */
+    .sidebar {
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border);
+      padding: 16px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      overflow-y: auto;
+    }
+    .sidebar-section {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      padding: 12px 8px 4px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: all 0.15s;
+      user-select: none;
+      font-weight: 500;
+      font-size: 13px;
+    }
+    .nav-item:hover     { background: var(--bg-hover); color: var(--text-primary); }
+    .nav-item.active    { background: var(--accent-glow); color: var(--text-primary); }
+    .nav-item .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+    .badge {
+      margin-left: auto;
+      background: var(--important);
+      color: #fff;
+      border-radius: 20px;
+      padding: 1px 7px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge.blue  { background: var(--system); }
+    .badge.gray  { background: var(--text-muted); }
+    .badge.green { background: var(--green); color: #1a1d27; }
+
+    .compose-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: var(--radius-md);
+      padding: 10px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      margin-bottom: 8px;
+      transition: filter 0.2s;
+    }
+    .compose-btn:hover { filter: brightness(1.15); }
+
+    /* ===== Deadline bar in sidebar ===== */
+    .deadline-item {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      margin: 2px 0;
+      font-size: 12px;
+    }
+    .deadline-title { font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
+    .deadline-time  { color: var(--text-muted); font-size: 11px; }
+    .deadline-bar-wrap { background: var(--border); border-radius: 3px; height: 4px; margin-top: 5px; overflow: hidden; }
+    .deadline-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
+    .fill-red    { background: var(--important); }
+    .fill-yellow { background: var(--yellow); }
+    .fill-green  { background: var(--green); }
+
+    /* ===== Main Content ===== */
+    .main {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--bg-base);
+    }
+    .main-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-surface);
+      flex-shrink: 0;
+    }
+    .main-title { font-size: 16px; font-weight: 700; }
+    .filter-tabs {
+      display: flex;
+      gap: 4px;
+      margin-left: auto;
+    }
+    .filter-tab {
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: all 0.15s;
+    }
+    .filter-tab:hover  { background: var(--bg-hover); color: var(--text-primary); }
+    .filter-tab.active { background: var(--accent-glow); color: var(--text-primary); border: 1px solid var(--accent); }
+
+    .email-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .email-list::-webkit-scrollbar { width: 4px; }
+    .email-list::-webkit-scrollbar-track { background: transparent; }
+    .email-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* ===== Email Card ===== */
+    .email-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s;
+      position: relative;
+    }
+    .email-card:hover { background: var(--bg-surface); border-color: var(--border); }
+    .email-card.unread { background: var(--bg-surface); }
+    .email-card.important {
+      background: var(--important-bg);
+      border-color: rgba(255, 107, 107, 0.3);
+    }
+    .email-card.important:hover { border-color: var(--important); }
+    .email-card.system {
+      background: var(--system-bg);
+      border-color: rgba(74, 158, 255, 0.15);
+      opacity: 0.8;
+    }
+    .email-card.selected {
+      background: var(--accent-glow) !important;
+      border-color: var(--accent) !important;
+      opacity: 1 !important;
+    }
+
+    .importance-bar {
+      position: absolute;
+      left: 0; top: 8px; bottom: 8px;
+      width: 3px;
+      border-radius: 0 3px 3px 0;
+    }
+    .important .importance-bar { background: var(--important); }
+    .system    .importance-bar { background: var(--system); }
+
+    .sender-avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .avatar-important { background: rgba(255,107,107,0.25); color: var(--important); }
+    .avatar-system    { background: rgba(74,158,255,0.15); color: var(--system); }
+    .avatar-default   { background: var(--bg-elevated); color: var(--text-secondary); }
+
+    .email-body { flex: 1; min-width: 0; }
+    .email-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 2px;
+    }
+    .sender-name { font-weight: 600; font-size: 13px; color: var(--text-primary); }
+    .important .sender-name { color: #ff9494; }
+    .email-time { margin-left: auto; font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+    .email-subject {
+      font-size: 13px; font-weight: 500; color: var(--text-primary);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px;
+    }
+    .email-card.system .email-subject { color: var(--text-secondary); }
+    .email-preview {
+      font-size: 12px; color: var(--text-muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .email-tags { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
+    .tag { padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+    .tag-urgent { background: rgba(255,107,107,0.2); color: var(--important); }
+    .tag-prof   { background: rgba(108,99,255,0.2); color: #a89fff; }
+    .tag-manaba { background: rgba(74,158,255,0.15); color: var(--system); }
+    .tag-paiza  { background: rgba(67,217,162,0.15); color: var(--green); }
+    .tag-admin  { background: rgba(255,209,102,0.15); color: var(--yellow); }
+    .tag-new    { background: rgba(108,99,255,0.35); color: #fff; }
+    .unread-dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
+    .read-dot   { width: 8px; height: 8px; flex-shrink: 0; }
+
+    .section-divider {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 4px 4px;
+      font-size: 11px; color: var(--text-muted);
+      font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .section-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    /* ===== Right Panel ===== */
+    .panel {
+      background: var(--bg-surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .panel-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .panel-title { font-size: 14px; font-weight: 700; }
+    .ai-chip {
+      background: var(--accent-glow);
+      border: 1px solid var(--accent);
+      border-radius: 20px;
+      padding: 2px 8px;
+      font-size: 10px; color: #a89fff; font-weight: 600;
+    }
+    .panel-close-btn {
+      margin-left: auto;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 11px; color: var(--text-muted);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .panel-close-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+    .panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .panel-body::-webkit-scrollbar { width: 3px; }
+    .panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* ===== Digest Panel ===== */
+    .digest-header {
+      font-size: 12px; font-weight: 600; color: var(--text-secondary);
+      text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px;
+    }
+    .digest-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+    }
+    .digest-card.urgent {
+      background: var(--important-bg);
+      border-color: rgba(255, 107, 107, 0.35);
+    }
+    .digest-item {
+      display: flex; align-items: flex-start; gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .digest-item:last-child { border-bottom: none; }
+    .digest-icon { font-size: 14px; margin-top: 1px; flex-shrink: 0; }
+    .digest-text { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+    .digest-text strong { color: var(--text-primary); font-weight: 600; }
+
+    .action-needed {
+      background: rgba(255, 107, 107, 0.08);
+      border: 1px solid rgba(255, 107, 107, 0.3);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+    }
+    .action-title {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 700; color: #ff9494; margin-bottom: 8px;
+    }
+    .action-item {
+      display: flex; align-items: flex-start; gap: 6px;
+      padding: 4px 0; font-size: 12px; color: var(--text-secondary);
+    }
+    .action-item::before { content: '→'; color: var(--important); flex-shrink: 0; }
+
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .stat-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px; text-align: center;
+    }
+    .stat-number { font-size: 22px; font-weight: 700; }
+    .stat-label  { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+    .stat-card.red    .stat-number { color: var(--important); }
+    .stat-card.blue   .stat-number { color: var(--system); }
+    .stat-card.green  .stat-number { color: var(--green); }
+    .stat-card.yellow .stat-number { color: var(--yellow); }
+
+    .notification-card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 14px; }
+    .notif-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(46,51,80,0.5); font-size: 12px;
+    }
+    .notif-row:last-child { border-bottom: none; }
+    .notif-source { color: var(--system); font-weight: 600; min-width: 60px; }
+    .notif-count  { margin-left: auto; background: var(--bg-base); border-radius: 4px; padding: 1px 6px; font-size: 11px; color: var(--text-muted); }
+
+    .filter-setting { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 14px; }
+    .filter-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 0; font-size: 12px; color: var(--text-secondary);
+    }
+    .toggle { width: 32px; height: 18px; border-radius: 9px; position: relative; cursor: pointer; transition: background 0.2s; }
+    .toggle.on  { background: var(--accent); }
+    .toggle.off { background: var(--border); }
+    .toggle::after {
+      content: ''; position: absolute; width: 12px; height: 12px;
+      border-radius: 50%; background: white; top: 3px; transition: left 0.2s;
+    }
+    .toggle.on::after  { left: 17px; }
+    .toggle.off::after { left: 3px; }
+
+    /* ===== Email Detail Panel ===== */
+    #detailPanel { display: none; }
+    .detail-from {
+      display: flex; align-items: center; gap: 10px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+    .detail-avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; font-weight: 700; flex-shrink: 0;
+    }
+    .detail-sender-name { font-weight: 700; font-size: 14px; }
+    .detail-address { font-size: 11px; color: var(--text-muted); }
+    .detail-subject {
+      font-size: 15px; font-weight: 700; color: var(--text-primary);
+      margin-bottom: 8px; line-height: 1.4;
+    }
+    .detail-meta { font-size: 11px; color: var(--text-muted); margin-bottom: 14px; }
+    .ai-summary-box {
+      background: var(--accent-glow);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      margin-bottom: 12px;
+    }
+    .ai-summary-label { font-size: 10px; font-weight: 700; color: #a89fff; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+    .ai-summary-text { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+    .ai-summary-text strong { color: var(--text-primary); }
+    .detail-body {
+      font-size: 13px; color: var(--text-secondary);
+      line-height: 1.8; white-space: pre-wrap;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      margin-bottom: 14px;
+    }
+    .detail-actions {
+      display: flex; gap: 8px; flex-wrap: wrap;
+    }
+    .btn {
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 600;
+      cursor: pointer; border: none;
+      transition: all 0.15s;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { filter: brightness(1.15); }
+    .btn-ghost {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+    .btn-ghost:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .btn-danger {
+      background: rgba(255,107,107,0.12);
+      border: 1px solid rgba(255,107,107,0.3);
+      color: var(--important);
+    }
+    .btn-danger:hover { background: rgba(255,107,107,0.2); }
+
+    /* ===== AI Reply Modal ===== */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 100;
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      width: 560px; max-width: 95vw;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+      overflow: hidden;
+      animation: slideUp 0.2s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+    .modal-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--accent-glow);
+    }
+    .modal-title { font-weight: 700; font-size: 15px; }
+    .modal-close {
+      margin-left: auto;
+      background: none; border: none;
+      color: var(--text-muted); font-size: 18px;
+      cursor: pointer; line-height: 1;
+    }
+    .modal-close:hover { color: var(--text-primary); }
+    .modal-body { padding: 20px; }
+    .draft-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+    .draft-textarea {
+      width: 100%;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: inherit;
+      line-height: 1.7;
+      resize: vertical;
+      min-height: 200px;
+      outline: none;
+    }
+    .draft-textarea:focus { border-color: var(--accent); }
+    .modal-footer {
+      display: flex; justify-content: flex-end; gap: 8px;
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+    }
+    .draft-note {
+      font-size: 11px; color: var(--text-muted);
+      display: flex; align-items: center; gap: 4px;
+      margin-right: auto;
+    }
+
+    /* ===== Compose Modal ===== */
+    .compose-modal { width: 540px; }
+    .compose-field {
+      margin-bottom: 12px;
+    }
+    .compose-field label { font-size: 11px; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 4px; }
+    .compose-input {
+      width: 100%;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+    }
+    .compose-input:focus { border-color: var(--accent); }
+    .ai-subject-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: var(--accent-glow);
+      border: 1px solid var(--accent);
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 11px; color: #a89fff;
+      cursor: pointer; margin-top: 4px;
+      transition: all 0.15s;
+    }
+    .ai-subject-chip:hover { background: rgba(108,99,255,0.4); }
+
+    /* ===== Toast ===== */
+    .toast-container {
+      position: fixed;
+      bottom: 24px; right: 24px;
+      display: flex; flex-direction: column; gap: 8px;
+      z-index: 200;
+    }
+    .toast {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 12px 18px;
+      display: flex; align-items: center; gap: 10px;
+      font-size: 13px; color: var(--text-primary);
+      box-shadow: var(--shadow);
+      animation: toastIn 0.25s ease;
+      min-width: 220px;
+    }
+    .toast.success { border-color: var(--green); }
+    .toast.info    { border-color: var(--accent); }
+    .toast.warning { border-color: var(--yellow); }
+    @keyframes toastIn {
+      from { transform: translateX(40px); opacity: 0; }
+      to   { transform: translateX(0);    opacity: 1; }
+    }
+    @keyframes toastOut {
+      from { transform: translateX(0);    opacity: 1; }
+      to   { transform: translateX(40px); opacity: 0; }
+    }
+
+    /* ===== Keyboard hint ===== */
+    .kbd-hint {
+      font-size: 10px; color: var(--text-muted);
+      text-align: center; padding: 6px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .kbd { background: var(--bg-elevated); border-radius: 3px; padding: 1px 5px; border: 1px solid var(--border); }
+
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ===== TOPBAR ===== -->
+  <header class="topbar">
+    <div class="logo">
+      <div class="logo-icon">✦</div>
+      UniFilter AI
+      <span class="v2-badge">v2</span>
+    </div>
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="メールを検索… (/ でフォーカス)" id="searchInput" oninput="filterEmails()" />
+    </div>
+    <div class="topbar-actions">
+      <div class="ai-badge">
+        <div class="ai-dot"></div>
+        AI フィルター稼働中
+      </div>
+      <div class="avatar" title="青木 航大">青</div>
+    </div>
+  </header>
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar">
+    <div class="compose-btn" onclick="openCompose()">✏️ 新規メール</div>
+
+    <div class="sidebar-section">メールボックス</div>
+    <div class="nav-item active" onclick="setFilter('all', this)">
+      <span class="nav-icon">📬</span> 受信トレイ
+      <span class="badge" id="badge-all">5</span>
+    </div>
+    <div class="nav-item" onclick="setFilter('important', this)">
+      <span class="nav-icon">⭐</span> 重要メール
+      <span class="badge">4</span>
+    </div>
+    <div class="nav-item" onclick="setFilter('system', this)">
+      <span class="nav-icon">🤖</span> 自動通知
+      <span class="badge blue">14</span>
+    </div>
+    <div class="nav-item" onclick="setFilter('sent', this)">
+      <span class="nav-icon">📤</span> 送信済み
+    </div>
+    <div class="nav-item" onclick="setFilter('draft', this)">
+      <span class="nav-icon">📝</span> 下書き
+      <span class="badge gray">2</span>
+    </div>
+
+    <div class="sidebar-section">AI フィルター</div>
+    <div class="nav-item" onclick="setFilter('important', this)">
+      <span class="nav-icon">🚨</span> 要返信
+      <span class="badge">4</span>
+    </div>
+    <div class="nav-item" onclick="setFilter('deadline', this)">
+      <span class="nav-icon">⏰</span> 期限あり
+      <span class="badge">3</span>
+    </div>
+    <div class="nav-item" onclick="setFilter('all', this)">
+      <span class="nav-icon">✅</span> 確認済み
+      <span class="badge green">6</span>
+    </div>
+
+    <div class="sidebar-section">⏰ 締切タイムライン</div>
+    <div class="deadline-item">
+      <div class="deadline-title">情報基礎演習 課題提出</div>
+      <div class="deadline-time">明日 12:00 まで</div>
+      <div class="deadline-bar-wrap"><div class="deadline-bar-fill fill-red" style="width:88%"></div></div>
+    </div>
+    <div class="deadline-item">
+      <div class="deadline-title">就職ガイダンス登録</div>
+      <div class="deadline-time">6/5 (金) 17:00 まで</div>
+      <div class="deadline-bar-wrap"><div class="deadline-bar-fill fill-yellow" style="width:60%"></div></div>
+    </div>
+    <div class="deadline-item">
+      <div class="deadline-title">Webプログラミング 課題</div>
+      <div class="deadline-time">6/10 (水) 23:59 まで</div>
+      <div class="deadline-bar-wrap"><div class="deadline-bar-fill fill-green" style="width:25%"></div></div>
+    </div>
+
+    <div class="sidebar-section">振り分け設定</div>
+    <div class="nav-item">
+      <span class="nav-icon">📚</span> manaba
+    </div>
+    <div class="nav-item">
+      <span class="nav-icon">💼</span> paiza / 就活
+    </div>
+    <div class="nav-item" onclick="openSettings()">
+      <span class="nav-icon">⚙️</span> フィルター設定
+    </div>
+  </aside>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <main class="main">
+    <div class="main-header">
+      <div class="main-title" id="mainTitle">📬 受信トレイ</div>
+      <div class="filter-tabs">
+        <div class="filter-tab active" onclick="setTab('all', this)">すべて</div>
+        <div class="filter-tab" onclick="setTab('unread', this)">未読</div>
+        <div class="filter-tab" onclick="setTab('starred', this)">スター付き</div>
+      </div>
+    </div>
+
+    <div class="email-list" id="emailList"></div>
+
+    <div class="kbd-hint">
+      <span class="kbd">J</span> 次へ &nbsp; <span class="kbd">K</span> 前へ &nbsp; <span class="kbd">R</span> 返信下書き &nbsp; <span class="kbd">E</span> 既読 &nbsp; <span class="kbd">/</span> 検索
+    </div>
+  </main>
+
+  <!-- ===== RIGHT PANEL ===== -->
+  <aside class="panel">
+    <!-- Digest (default) -->
+    <div id="digestPanel">
+      <div class="panel-header">
+        <div class="panel-title">📊 今日のダイジェスト</div>
+        <div class="ai-chip">AI 生成</div>
+      </div>
+      <div class="panel-body">
+        <div>
+          <div class="digest-header">📈 今日の統計</div>
+          <div class="stats-grid">
+            <div class="stat-card red">
+              <div class="stat-number">4</div>
+              <div class="stat-label">要返信</div>
+            </div>
+            <div class="stat-card blue">
+              <div class="stat-number">14</div>
+              <div class="stat-label">自動通知</div>
+            </div>
+            <div class="stat-card yellow">
+              <div class="stat-number">3</div>
+              <div class="stat-label">期限あり</div>
+            </div>
+            <div class="stat-card green">
+              <div class="stat-number">21</div>
+              <div class="stat-label">総受信数</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-needed">
+          <div class="action-title">🚨 今日中に対応が必要</div>
+          <div class="action-item">田中教授の出席確認メールに返信する</div>
+          <div class="action-item">情報基礎演習のレポート提出（明日12:00）</div>
+          <div class="action-item">就職ガイダンス参加登録（6/5締切）</div>
+          <div class="action-item">吉田先生のゼミ面談希望日を送る</div>
+        </div>
+
+        <div>
+          <div class="digest-header">🤖 AI 要約</div>
+          <div class="digest-card">
+            <div class="digest-item">
+              <div class="digest-icon">📘</div>
+              <div class="digest-text"><strong>manaba</strong> から 7 件の通知。「情報基礎演習」課題が更新、提出期限は明日12:00。</div>
+            </div>
+            <div class="digest-item">
+              <div class="digest-icon">💼</div>
+              <div class="digest-text"><strong>paiza / リクナビ</strong> から 5 件。スカウトとサマーインターン情報。</div>
+            </div>
+            <div class="digest-item">
+              <div class="digest-icon">📧</div>
+              <div class="digest-text"><strong>大学事務局</strong> 重要連絡 1 件（就職ガイダンス登録6/5締切）。</div>
+            </div>
+            <div class="digest-item">
+              <div class="digest-icon">👨‍🏫</div>
+              <div class="digest-text"><strong>教員</strong> から直接メール 3 件。田中教授・吉田先生・山田先生より要返信。</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="digest-header">🤖 自動通知の内訳</div>
+          <div class="notification-card">
+            <div class="notif-row"><span class="notif-source">manaba</span><span>講義資料・課題の更新</span><span class="notif-count">7件</span></div>
+            <div class="notif-row"><span class="notif-source">paiza</span><span>スカウト・評価更新</span><span class="notif-count">3件</span></div>
+            <div class="notif-row"><span class="notif-source">リクナビ</span><span>インターン情報</span><span class="notif-count">2件</span></div>
+            <div class="notif-row"><span class="notif-source">その他</span><span>システム通知</span><span class="notif-count">2件</span></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="digest-header">⚙️ AI フィルター設定</div>
+          <div class="filter-setting">
+            <div class="filter-row"><span>manaba 通知を自動整理</span><div class="toggle on" onclick="toggleSwitch(this)"></div></div>
+            <div class="filter-row"><span>paiza スカウトを折りたたむ</span><div class="toggle on" onclick="toggleSwitch(this)"></div></div>
+            <div class="filter-row"><span>期限ワード検出（至急・締切）</span><div class="toggle on" onclick="toggleSwitch(this)"></div></div>
+            <div class="filter-row"><span>未返信リマインド通知</span><div class="toggle off" onclick="toggleSwitch(this)"></div></div>
+            <div class="filter-row"><span>AI 返信ドラフト自動生成 🆕</span><div class="toggle on" onclick="toggleSwitch(this)"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Email Detail -->
+    <div id="detailPanel" style="display:none; flex-direction:column; height:100%; overflow:hidden;">
+      <div class="panel-header">
+        <div class="panel-title" id="detailPanelTitle">📧 メール詳細</div>
+        <div class="ai-chip">AI 分析済み</div>
+        <button class="panel-close-btn" onclick="closeDetail()">✕ 閉じる</button>
+      </div>
+      <div class="panel-body">
+        <div class="detail-from">
+          <div class="detail-avatar" id="detailAvatar"></div>
+          <div>
+            <div class="detail-sender-name" id="detailSenderName"></div>
+            <div class="detail-address" id="detailAddress"></div>
+          </div>
+          <div class="email-time" id="detailTime" style="margin-left:auto"></div>
+        </div>
+        <div class="detail-subject" id="detailSubject"></div>
+        <div class="detail-meta" id="detailMeta"></div>
+        <div class="ai-summary-box">
+          <div class="ai-summary-label">✦ AI 要約</div>
+          <div class="ai-summary-text" id="detailAISummary"></div>
+        </div>
+        <div class="detail-body" id="detailBody"></div>
+        <div class="detail-actions">
+          <button class="btn btn-primary" onclick="openReplyDraft()">✍️ AI で返信を作成</button>
+          <button class="btn btn-ghost" onclick="markRead()">✅ 既読にする</button>
+          <button class="btn btn-danger" onclick="archiveEmail()">📦 アーカイブ</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- ===== AI REPLY MODAL ===== -->
+<div class="modal-overlay" id="replyModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span>✦</span>
+      <div class="modal-title">AI 返信ドラフト</div>
+      <button class="modal-close" onclick="closeModal('replyModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="draft-label">生成された返信文（編集できます）</div>
+      <textarea class="draft-textarea" id="draftTextarea"></textarea>
+    </div>
+    <div class="modal-footer">
+      <span class="draft-note">⚡ AI が文脈から生成（確認後に送信してください）</span>
+      <button class="btn btn-ghost" onclick="closeModal('replyModal')">キャンセル</button>
+      <button class="btn btn-primary" onclick="sendDraft()">📤 送信する</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== COMPOSE MODAL ===== -->
+<div class="modal-overlay" id="composeModal">
+  <div class="modal compose-modal">
+    <div class="modal-header">
+      <span>✏️</span>
+      <div class="modal-title">新規メール作成</div>
+      <button class="modal-close" onclick="closeModal('composeModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="compose-field">
+        <label>宛先</label>
+        <input class="compose-input" type="text" placeholder="宛先のメールアドレス" id="composeTo" />
+      </div>
+      <div class="compose-field">
+        <label>件名</label>
+        <input class="compose-input" type="text" placeholder="件名を入力…" id="composeSubject" />
+        <div class="ai-subject-chip" onclick="suggestSubject()">✦ AI で件名を提案</div>
+      </div>
+      <div class="compose-field">
+        <label>本文</label>
+        <textarea class="draft-textarea" placeholder="本文を入力…" id="composeBody" style="min-height:160px"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('composeModal')">下書き保存</button>
+      <button class="btn btn-primary" onclick="sendCompose()">📤 送信する</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TOAST CONTAINER ===== -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ===== EMAIL DATA (v2: added body and aiSummary) =====
+const emails = [
+  {
+    id: 1, type: 'important', unread: true, starred: true,
+    sender: '田中 誠一郎 教授', senderInitial: '田',
+    address: 's-tanaka@cit.ac.jp',
+    subject: '【要確認】プログラミング基礎 — 課題提出についての質問への回答',
+    preview: '先日の質問への回答です。次回講義前に確認しておいてください…',
+    time: '10:42', date: '2026/06/03 10:42',
+    tags: ['tag-urgent', '要返信'], tagClasses: ['tag-urgent'],
+    body: `青木さん、
+
+先日いただいた課題提出に関するご質問に回答します。
+
+提出形式はPDF形式でお願いします。ファイル名は「学籍番号_氏名_第6回.pdf」としてください。
+
+また、来週の課題についてですが、Pythonのクラスとオブジェクト指向についての演習を予定しています。教科書の第8章を予習しておいてください。
+
+不明点があれば講義後に質問に来てください。
+
+田中 誠一郎`,
+    aiSummary: '<strong>返信必要：</strong>課題はPDF形式・ファイル名「学籍番号_氏名_第6回.pdf」で提出。来週は第8章の予習が必要。',
+    replyDraft: `田中先生、
+
+ご回答いただきありがとうございます。
+
+提出形式についてよく理解できました。「学籍番号_氏名_第6回.pdf」でファイルを用意して、期限内に提出いたします。
+
+来週の課題についても、教科書第8章を予習しておきます。
+
+ご丁寧に対応いただき、ありがとうございました。
+
+青木 航大
+s24c3002mq@chibatech.ac.jp`,
+  },
+  {
+    id: 2, type: 'important', unread: true, starred: false,
+    sender: '大学事務局 (学務課)', senderInitial: '大',
+    address: 'gakumu@cit.ac.jp',
+    subject: '【重要】2026年度 就職ガイダンス参加登録のお願い（6/5締切）',
+    preview: '対象：3年生・4年生。就職活動に向けて重要な情報をお伝えする機会です…',
+    time: '09:15', date: '2026/06/03 09:15',
+    tags: ['tag-admin', '締切あり'], tagClasses: ['tag-admin'],
+    body: `対象学生の皆さんへ
+
+2026年度就職ガイダンスのご案内です。
+
+日時：2026年6月15日（月）13:00〜16:00
+場所：1号館大講義室（1-101）
+対象：3年生・4年生
+
+参加登録は学生ポータルから行ってください。
+登録締切：6月5日（金）17:00
+
+就職活動に向けて非常に重要な情報を提供する機会ですので、必ず参加登録をお願いします。
+
+千葉工業大学 学務課`,
+    aiSummary: '<strong>締切 6/5 (金) 17:00：</strong>就職ガイダンス参加登録が必要。学生ポータルから申込。6/15開催。',
+    replyDraft: '',
+  },
+  {
+    id: 3, type: 'important', unread: false, starred: true,
+    sender: '吉田 彩子 先生', senderInitial: '吉',
+    address: 'a-yoshida@cit.ac.jp',
+    subject: '【ゼミ面談】日程調整のお願い',
+    preview: '来週ゼミ面談を実施したいと思います。以下の日程でご都合はいかがでしょうか…',
+    time: '昨日', date: '2026/06/02 14:30',
+    tags: ['tag-prof', '要返信'], tagClasses: ['tag-prof'],
+    body: `青木さん、
+
+来週、ゼミの進捗確認のための面談を実施したいと思います。
+
+候補日をいくつか挙げますので、ご都合の良い日程をお知らせください。
+
+①6月9日（月）13:00〜14:00
+②6月10日（火）15:00〜16:00
+③6月11日（水）10:00〜11:00
+
+場所は私の研究室（7号館302室）を予定しています。
+
+吉田 彩子`,
+    aiSummary: '<strong>返信必要：</strong>①6/9 13:00 ②6/10 15:00 ③6/11 10:00 のどれか希望日を返信。',
+    replyDraft: `吉田先生、
+
+お声がけいただきありがとうございます。
+
+以下の日程でよろしくお願いします。
+
+②6月10日（火）15:00〜16:00
+
+上記で参加いたします。7号館302室に伺います。
+
+どうぞよろしくお願いいたします。
+
+青木 航大
+s24c3002mq@chibatech.ac.jp`,
+  },
+  {
+    id: 4, type: 'important', unread: true, starred: false,
+    sender: '山田 健二 先生', senderInitial: '山',
+    address: 'k-yamada@cit.ac.jp',
+    subject: '[データベース論] 補講のご連絡',
+    preview: '第11回の補講について詳細をお知らせします。通常の教室ではなく…',
+    time: '08:00', date: '2026/06/03 08:00',
+    tags: ['tag-prof'], tagClasses: ['tag-prof'],
+    body: `受講生の皆さんへ
+
+第11回（6月10日）の授業について補講のご連絡をします。
+
+通常の講義室（3号館203）ではなく、10号館301室で実施します。
+時間は変わらず10:40〜12:10です。
+
+試験範囲に関わる重要な内容（トランザクション・ACID特性）を扱いますので、必ず出席してください。
+
+山田 健二`,
+    aiSummary: '6/10 補講は <strong>10号館301室</strong>（通常教室は変更）。試験範囲の重要内容あり。出席必須。',
+    replyDraft: '',
+  },
+  {
+    id: 5, type: 'system', unread: true, starred: false,
+    sender: 'manaba [情報基礎演習]', senderInitial: 'M',
+    address: 'noreply@manaba.jp',
+    subject: '[manaba] 情報基礎演習: 課題「第6回 再帰とアルゴリズム」が更新されました',
+    preview: 'コース「情報基礎演習」で課題が公開されました。提出期限: 6/4 12:00',
+    time: '11:00', date: '2026/06/03 11:00',
+    tags: ['tag-manaba'], tagClasses: ['tag-manaba'],
+    body: `【manaba 自動通知】
+
+コース名：情報基礎演習
+課題名：第6回 再帰とアルゴリズム設計
+提出期限：2026年6月4日（木）12:00
+
+課題の詳細はmanabaポータルからご確認ください。
+
+※このメールは自動送信されています。`,
+    aiSummary: '⏰ <strong>明日 12:00 締切：</strong>情報基礎演習「第6回 再帰とアルゴリズム」。manaba から提出。',
+    replyDraft: '',
+  },
+  {
+    id: 6, type: 'system', unread: true, starred: false,
+    sender: 'manaba [Webプログラミング]', senderInitial: 'M',
+    address: 'noreply@manaba.jp',
+    subject: '[manaba] Webプログラミング: 講義資料が追加されました',
+    preview: '「第10回_React基礎.pdf」が追加されました',
+    time: '10:50', date: '2026/06/03 10:50',
+    tags: ['tag-manaba'], tagClasses: ['tag-manaba'],
+    body: `【manaba 自動通知】
+
+コース名：Webプログラミング入門
+追加ファイル：第10回_React基礎.pdf
+課題提出期限：2026年6月10日（水）23:59
+
+※このメールは自動送信されています。`,
+    aiSummary: 'Webプログラミング「第10回_React基礎.pdf」が追加。課題締切は <strong>6/10 23:59</strong>。',
+    replyDraft: '',
+  },
+  {
+    id: 7, type: 'system', unread: false, starred: false,
+    sender: 'paiza (スカウト)', senderInitial: 'P',
+    address: 'scout@paiza.jp',
+    subject: '【paiza】株式会社TechStartから新しいスカウトが届いています',
+    preview: 'プログラミングスキルを活かせるインターンシップのご案内',
+    time: '09:30', date: '2026/06/03 09:30',
+    tags: ['tag-paiza'], tagClasses: ['tag-paiza'],
+    body: `【paiza スカウト通知】
+
+株式会社TechStart様からスカウトが届いています。
+
+職種：バックエンドエンジニア（インターン）
+期間：2026年8月〜9月（2ヶ月）
+報酬：時給1,500円
+
+詳細はpaizaポータルよりご確認ください。
+
+※このメールは自動送信されています。`,
+    aiSummary: 'TechStart社からのスカウト。バックエンドインターン（8〜9月・時給1,500円）。就活関連のため自動整理済み。',
+    replyDraft: '',
+  },
+  {
+    id: 8, type: 'system', unread: false, starred: false,
+    sender: 'manaba [OS演習]', senderInitial: 'M',
+    address: 'noreply@manaba.jp',
+    subject: '[manaba] OS演習: 小テストの結果が公開されました（平均76.4点）',
+    preview: '第8回小テストの採点が完了しました。マイページから確認してください',
+    time: '昨日', date: '2026/06/02 16:00',
+    tags: ['tag-manaba'], tagClasses: ['tag-manaba'],
+    body: `【manaba 自動通知】
+
+コース名：OS演習
+第8回小テスト採点完了
+クラス平均：76.4点
+
+詳細はmanabaのマイページからご確認ください。
+
+※このメールは自動送信されています。`,
+    aiSummary: 'OS演習 第8回小テスト結果公開。クラス平均76.4点。確認はmanabaから。',
+    replyDraft: '',
+  },
+  {
+    id: 9, type: 'system', unread: false, starred: false,
+    sender: 'リクナビ 2027', senderInitial: 'R',
+    address: 'info@rikunabi.com',
+    subject: 'あなたにおすすめのインターン情報（IT/Web系 5社）',
+    preview: 'サマーインターンシップ情報。応募期限が近いものがあります',
+    time: '2日前', date: '2026/06/01 10:00',
+    tags: ['tag-paiza'], tagClasses: ['tag-paiza'],
+    body: `【リクナビ 2027 おすすめ情報】
+
+あなたのプロフィールに合ったインターン情報です。
+
+1. 株式会社サイバーエージェント — エンジニアコース（応募6/15まで）
+2. ヤフー株式会社 — データエンジニアコース
+3. 楽天グループ — Webエンジニアコース
+4. フリー株式会社 — バックエンドエンジニア
+5. メルカリ — iOSエンジニアコース
+
+詳細はリクナビポータルよりご確認ください。`,
+    aiSummary: 'IT/Web系インターン5社の案内。サイバーエージェントは <strong>6/15 締切</strong>。就活フォルダに整理済み。',
+    replyDraft: '',
+  },
+];
+
+// ===== STATE =====
+let currentFilter   = 'all';
+let currentTab      = 'all';
+let searchQuery     = '';
+let selectedEmailId = null;
+let selectedIdx     = -1;
+
+// ===== RENDER =====
+function getFiltered() {
+  let f = emails;
+  if (currentFilter === 'important') f = f.filter(e => e.type === 'important');
+  if (currentFilter === 'system')    f = f.filter(e => e.type === 'system');
+  if (currentFilter === 'deadline')  f = f.filter(e => e.tags.some(t => t.includes('締切') || t.includes('返信')));
+  if (currentTab    === 'unread')    f = f.filter(e => e.unread);
+  if (currentTab    === 'starred')   f = f.filter(e => e.starred);
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    f = f.filter(e =>
+      e.sender.toLowerCase().includes(q) ||
+      e.subject.toLowerCase().includes(q) ||
+      e.preview.toLowerCase().includes(q)
+    );
+  }
+  return f;
+}
+
+function renderEmails() {
+  const list     = document.getElementById('emailList');
+  const filtered = getFiltered();
+  const important = filtered.filter(e => e.type === 'important');
+  const system    = filtered.filter(e => e.type === 'system');
+
+  let html = '';
+  if (important.length > 0) {
+    html += `<div class="section-divider">🚨 重要メール — 人間からの直接連絡 (${important.length})</div>`;
+    html += important.map(emailCard).join('');
+  }
+  if (system.length > 0 && (currentFilter === 'all' || currentFilter === 'system')) {
+    html += `<div class="section-divider">🤖 自動通知 — AI が整理済み (${system.length})</div>`;
+    html += system.map(emailCard).join('');
+  }
+  if (filtered.length === 0) {
+    html = `<div style="text-align:center;padding:60px 20px;color:var(--text-muted);">
+      <div style="font-size:40px;margin-bottom:12px;">📭</div>
+      <div>メールが見つかりません</div>
+    </div>`;
+  }
+
+  list.innerHTML = html;
+  updateSelectedStyle();
+}
+
+function emailCard(e) {
+  const typeClass   = e.type === 'important' ? 'important' : 'system';
+  const unreadClass = e.unread ? 'unread' : '';
+  const avatarClass = e.type === 'important' ? 'avatar-important' : 'avatar-system';
+  const dotHtml     = e.unread ? `<div class="unread-dot"></div>` : `<div class="read-dot"></div>`;
+  const tagsHtml    = e.tagClasses.map((cls, i) => `<span class="tag ${cls}">${e.tags[i] || ''}</span>`).join('');
+  const selectedClass = selectedEmailId === e.id ? 'selected' : '';
+
+  return `
+    <div class="email-card ${typeClass} ${unreadClass} ${selectedClass}" id="card-${e.id}" onclick="selectEmail(${e.id})">
+      <div class="importance-bar"></div>
+      <div class="sender-avatar ${avatarClass}">${e.senderInitial}</div>
+      <div class="email-body">
+        <div class="email-meta">
+          <div class="sender-name">${e.sender}</div>
+          <div class="email-time">${e.time}</div>
+        </div>
+        <div class="email-subject">${e.subject}</div>
+        <div class="email-preview">${e.preview}</div>
+        <div class="email-tags">${tagsHtml}</div>
+      </div>
+      ${dotHtml}
+    </div>`;
+}
+
+function updateSelectedStyle() {
+  document.querySelectorAll('.email-card').forEach(c => c.classList.remove('selected'));
+  if (selectedEmailId) {
+    const card = document.getElementById(`card-${selectedEmailId}`);
+    if (card) card.classList.add('selected');
+  }
+}
+
+// ===== EMAIL DETAIL =====
+function selectEmail(id) {
+  const email = emails.find(e => e.id === id);
+  if (!email) return;
+  selectedEmailId = id;
+  updateSelectedStyle();
+
+  // Update index for keyboard nav
+  const filtered = getFiltered();
+  selectedIdx = filtered.findIndex(e => e.id === id);
+
+  // Mark as read
+  email.unread = false;
+
+  // Show detail panel
+  document.getElementById('digestPanel').style.display = 'none';
+  const dp = document.getElementById('detailPanel');
+  dp.style.display = 'flex';
+
+  // Set type color
+  const avatarEl  = document.getElementById('detailAvatar');
+  avatarEl.textContent = email.senderInitial;
+  avatarEl.className   = 'detail-avatar ' + (email.type === 'important' ? 'avatar-important' : 'avatar-system');
+
+  document.getElementById('detailSenderName').textContent = email.sender;
+  document.getElementById('detailAddress').textContent    = `<${email.address}>`;
+  document.getElementById('detailTime').textContent       = email.date;
+  document.getElementById('detailSubject').textContent    = email.subject;
+  document.getElementById('detailMeta').textContent       = `宛先: あなた (s24c3002mq@chibatech.ac.jp)`;
+  document.getElementById('detailAISummary').innerHTML    = email.aiSummary || '—';
+  document.getElementById('detailBody').textContent       = email.body;
+}
+
+function closeDetail() {
+  selectedEmailId = null;
+  selectedIdx     = -1;
+  document.getElementById('digestPanel').style.display = '';
+  document.getElementById('detailPanel').style.display = 'none';
+  renderEmails();
+}
+
+// ===== ACTIONS =====
+function markRead() {
+  const email = emails.find(e => e.id === selectedEmailId);
+  if (email) {
+    email.unread = false;
+    showToast('✅ 既読にしました', 'success');
+    renderEmails();
+    updateSelectedStyle();
+  }
+}
+
+function archiveEmail() {
+  const idx = emails.findIndex(e => e.id === selectedEmailId);
+  if (idx !== -1) {
+    const sender = emails[idx].sender;
+    emails.splice(idx, 1);
+    closeDetail();
+    renderEmails();
+    showToast(`📦 ${sender} のメールをアーカイブしました`, 'info');
+  }
+}
+
+// ===== REPLY DRAFT =====
+function openReplyDraft() {
+  const email = emails.find(e => e.id === selectedEmailId);
+  if (!email) return;
+  const draft = email.replyDraft ||
+    `${email.sender.split(' ')[0]}様、\n\nメールありがとうございます。\n\n内容を確認いたしました。\n\n青木 航大\ns24c3002mq@chibatech.ac.jp`;
+  document.getElementById('draftTextarea').value = draft;
+  document.getElementById('replyModal').classList.add('open');
+}
+
+function sendDraft() {
+  closeModal('replyModal');
+  const email = emails.find(e => e.id === selectedEmailId);
+  showToast(`📤 ${email ? email.sender : ''} へ返信を送信しました`, 'success');
+}
+
+// ===== COMPOSE =====
+function openCompose() {
+  document.getElementById('composeTo').value      = '';
+  document.getElementById('composeSubject').value = '';
+  document.getElementById('composeBody').value    = '';
+  document.getElementById('composeModal').classList.add('open');
+}
+
+function suggestSubject() {
+  const to   = document.getElementById('composeTo').value;
+  const body = document.getElementById('composeBody').value;
+  let suggestion = '【ご確認のお願い】';
+  if (to.includes('tanaka') || body.includes('課題'))  suggestion = '【課題提出】第6回 レポートについて';
+  else if (to.includes('yoshida') || body.includes('面談')) suggestion = '【ゼミ面談】日程についてのご返答';
+  else if (body.includes('質問')) suggestion = '【質問】授業内容について';
+  document.getElementById('composeSubject').value = suggestion;
+  showToast('✦ AI が件名を提案しました', 'info');
+}
+
+function sendCompose() {
+  closeModal('composeModal');
+  showToast('📤 メールを送信しました', 'success');
+}
+
+function openSettings() {
+  showToast('⚙️ フィルター設定（プロトタイプ）', 'info');
+}
+
+// ===== MODAL =====
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// ===== FILTERS =====
+function setFilter(filter, el) {
+  currentFilter = filter;
+  selectedEmailId = null;
+  document.getElementById('digestPanel').style.display = '';
+  document.getElementById('detailPanel').style.display = 'none';
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (el) el.classList.add('active');
+  const titles = { all:'📬 受信トレイ', important:'⭐ 重要メール', system:'🤖 自動通知', sent:'📤 送信済み', draft:'📝 下書き', deadline:'⏰ 期限あり' };
+  document.getElementById('mainTitle').textContent = titles[filter] || '📬 受信トレイ';
+  renderEmails();
+}
+
+function setTab(tab, el) {
+  currentTab = tab;
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  if (el) el.classList.add('active');
+  renderEmails();
+}
+
+function filterEmails() {
+  searchQuery = document.getElementById('searchInput').value;
+  renderEmails();
+}
+
+function toggleSwitch(el) {
+  el.classList.toggle('on');
+  el.classList.toggle('off');
+}
+
+// ===== KEYBOARD NAVIGATION =====
+document.addEventListener('keydown', e => {
+  const searchFocused = document.activeElement === document.getElementById('searchInput');
+
+  if (e.key === '/' && !searchFocused) {
+    e.preventDefault();
+    document.getElementById('searchInput').focus();
+    return;
+  }
+  if (searchFocused) return;
+
+  const filtered = getFiltered();
+
+  if (e.key === 'j' || e.key === 'J') {
+    selectedIdx = Math.min(selectedIdx + 1, filtered.length - 1);
+    if (filtered[selectedIdx]) selectEmail(filtered[selectedIdx].id);
+  }
+  if (e.key === 'k' || e.key === 'K') {
+    selectedIdx = Math.max(selectedIdx - 1, 0);
+    if (filtered[selectedIdx]) selectEmail(filtered[selectedIdx].id);
+  }
+  if ((e.key === 'r' || e.key === 'R') && selectedEmailId) {
+    openReplyDraft();
+  }
+  if ((e.key === 'e' || e.key === 'E') && selectedEmailId) {
+    markRead();
+  }
+  if (e.key === 'Escape') {
+    if (document.getElementById('replyModal').classList.contains('open'))   closeModal('replyModal');
+    else if (document.getElementById('composeModal').classList.contains('open')) closeModal('composeModal');
+    else if (selectedEmailId) closeDetail();
+  }
+});
+
+// ===== TOAST =====
+function showToast(msg, type = 'info') {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.style.animation = 'toastOut 0.25s ease forwards';
+    setTimeout(() => toast.remove(), 250);
+  }, 2800);
+}
+
+// ===== INIT =====
+renderEmails();
+</script>
+</body>
+</html>
