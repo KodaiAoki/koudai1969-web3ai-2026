@@ -1,0 +1,12 @@
+# 認証情報・環境変数（絶対にコミットしない）
+.env
+.env.*
+!.env.example
+
+# 依存・ビルド
+node_modules/
+.vercel/
+
+# OS
+.DS_Store
+**/.DS_Store
