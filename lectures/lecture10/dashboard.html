@@ -1,0 +1,2765 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UniFilter AI v6 — あなたの Gmail を AI で整理するダッシュボード</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-base:      #0f1117;
+      --bg-surface:   #1a1d27;
+      --bg-elevated:  #22263a;
+      --bg-hover:     #2a2f47;
+      --border:       #2e3350;
+      --accent:       #6c63ff;
+      --accent-glow:  rgba(108, 99, 255, 0.25);
+      --important:    #ff6b6b;
+      --important-bg: rgba(255, 107, 107, 0.12);
+      --system:       #4a9eff;
+      --system-bg:    rgba(74, 158, 255, 0.08);
+      --green:        #43d9a2;
+      --yellow:       #ffd166;
+      --text-primary: #e8eaf6;
+      --text-secondary:#9399b5;
+      --text-muted:   #5c617c;
+      --radius-sm:    8px;
+      --radius-md:    12px;
+      --radius-lg:    18px;
+      --shadow:       0 4px 24px rgba(0,0,0,0.4);
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Inter', 'Hiragino Kaku Gothic ProN', sans-serif;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* ===== Layout ===== */
+    .app {
+      display: grid;
+      grid-template-columns: 220px 1fr 320px;
+      grid-template-rows: 56px 1fr;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ===== Topbar ===== */
+    .topbar {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 20px;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+      z-index: 10;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+    .logo-icon {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, var(--accent), #9c27b0);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+    }
+    .v4-badge {
+      background: linear-gradient(135deg, var(--green), #00b894);
+      color: #0f1117;
+      border-radius: 6px;
+      padding: 2px 7px;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+    }
+    .search-bar {
+      flex: 1;
+      max-width: 400px;
+      position: relative;
+    }
+    .search-bar input {
+      width: 100%;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 7px 14px 7px 36px;
+      color: var(--text-primary);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-bar input:focus { border-color: var(--accent); }
+    .search-bar input::placeholder { color: var(--text-muted); }
+    .search-icon {
+      position: absolute;
+      left: 10px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    /* Import button */
+    .import-btn {
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(67,217,162,0.1);
+      border: 1px solid rgba(67,217,162,0.4);
+      border-radius: var(--radius-sm);
+      padding: 6px 14px;
+      color: var(--green);
+      font-size: 12px; font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .import-btn:hover { background: rgba(67,217,162,0.2); }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: auto;
+    }
+    .ai-badge {
+      display: flex; align-items: center; gap: 5px;
+      background: var(--accent-glow);
+      border: 1px solid var(--accent);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 12px;
+      color: #a89fff;
+      font-weight: 500;
+    }
+    .ai-dot {
+      width: 6px; height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .avatar {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), #9c27b0);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700;
+      cursor: pointer;
+    }
+
+    /* ===== Sidebar ===== */
+    .sidebar {
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border);
+      padding: 16px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      overflow-y: auto;
+    }
+    .sidebar-section {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      padding: 12px 8px 4px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: all 0.15s;
+      user-select: none;
+      font-weight: 500;
+      font-size: 13px;
+    }
+    .nav-item:hover     { background: var(--bg-hover); color: var(--text-primary); }
+    .nav-item.active    { background: var(--accent-glow); color: var(--text-primary); }
+    .nav-item .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+    .badge {
+      margin-left: auto;
+      background: var(--important);
+      color: #fff;
+      border-radius: 20px;
+      padding: 1px 7px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge.blue  { background: var(--system); }
+    .badge.gray  { background: var(--text-muted); }
+    .badge.green { background: var(--green); color: #1a1d27; }
+
+    .compose-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: var(--radius-md);
+      padding: 10px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      margin-bottom: 8px;
+      transition: filter 0.2s;
+    }
+    .compose-btn:hover { filter: brightness(1.15); }
+
+    /* Import section in sidebar */
+    .import-stat-card {
+      background: rgba(67,217,162,0.07);
+      border: 1px solid rgba(67,217,162,0.2);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      margin: 2px 0;
+    }
+    .import-stat-row {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 12px;
+    }
+    .import-stat-label { color: var(--text-muted); }
+    .import-stat-num { color: var(--green); font-weight: 700; }
+
+    /* Deadline bar */
+    .deadline-item {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      margin: 2px 0;
+      font-size: 12px;
+    }
+    .deadline-title { font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
+    .deadline-time  { color: var(--text-muted); font-size: 11px; }
+    .deadline-bar-wrap { background: var(--border); border-radius: 3px; height: 4px; margin-top: 5px; overflow: hidden; }
+    .deadline-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
+    .fill-red    { background: var(--important); }
+    .fill-yellow { background: var(--yellow); }
+    .fill-green  { background: var(--green); }
+
+    /* ===== Main Content ===== */
+    .main {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--bg-base);
+    }
+    .main-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-surface);
+      flex-shrink: 0;
+    }
+    .main-title { font-size: 16px; font-weight: 700; }
+    .filter-tabs { display: flex; gap: 4px; margin-left: auto; }
+    .filter-tab {
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 12px; font-weight: 500;
+      cursor: pointer; color: var(--text-secondary);
+      transition: all 0.15s;
+    }
+    .filter-tab:hover  { background: var(--bg-hover); color: var(--text-primary); }
+    .filter-tab.active { background: var(--accent-glow); color: var(--text-primary); border: 1px solid var(--accent); }
+
+    /* v6: 表示順トグル（重要度順 ⇄ 新着順） */
+    .sort-toggle {
+      display: flex;
+      gap: 2px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2px;
+    }
+    .sort-opt {
+      border: none;
+      background: none;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 18px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .sort-opt:hover  { color: var(--text-primary); }
+    .sort-opt.active { background: var(--accent); color: #fff; }
+
+    /* v6: カテゴリタグ（キーワード振り分け） */
+    .tag-cat { font-weight: 600; }
+
+    /* v6: キーワード振り分け設定モーダル */
+    .filter-add-row { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+    .filter-add-row .compose-input { flex: 1; min-width: 130px; }
+    .filter-rule-list { display: flex; flex-direction: column; gap: 8px; max-height: 340px; overflow-y: auto; }
+    .filter-rule-row {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--bg-elevated); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 8px 10px;
+    }
+    .frr-input {
+      flex: 1; min-width: 0;
+      background: var(--bg-base); border: 1px solid var(--border);
+      border-radius: 6px; padding: 6px 10px;
+      color: var(--text-primary); font-size: 13px; font-family: inherit; outline: none;
+    }
+    .frr-input:focus { border-color: var(--accent); }
+    .frr-cat-input { font-weight: 600; }
+    .frr-arrow { color: var(--text-muted); flex: none; }
+    .frr-del {
+      flex: none; background: rgba(255,107,107,0.12);
+      border: 1px solid rgba(255,107,107,0.3); color: var(--important);
+      border-radius: 6px; padding: 6px 9px; cursor: pointer; font-size: 13px;
+    }
+    .frr-del:hover { background: rgba(255,107,107,0.2); }
+
+    /* Import banner */
+    .import-banner {
+      display: none;
+      align-items: center; gap: 10px;
+      padding: 8px 20px;
+      background: rgba(67,217,162,0.08);
+      border-bottom: 1px solid rgba(67,217,162,0.25);
+      font-size: 12px; color: var(--green);
+      flex-shrink: 0;
+    }
+    .import-banner.visible { display: flex; }
+
+    .email-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .email-list::-webkit-scrollbar { width: 4px; }
+    .email-list::-webkit-scrollbar-track { background: transparent; }
+    .email-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* ===== Email Card ===== */
+    .email-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s;
+      position: relative;
+    }
+    .email-card:hover { background: var(--bg-surface); border-color: var(--border); }
+    .email-card.unread { background: var(--bg-surface); }
+    .email-card.important {
+      background: var(--important-bg);
+      border-color: rgba(255, 107, 107, 0.3);
+    }
+    .email-card.important:hover { border-color: var(--important); }
+    .email-card.system {
+      background: var(--system-bg);
+      border-color: rgba(74, 158, 255, 0.15);
+      opacity: 0.8;
+    }
+    .email-card.selected {
+      background: var(--accent-glow) !important;
+      border-color: var(--accent) !important;
+      opacity: 1 !important;
+    }
+    .email-card.is-imported { outline: 1px solid rgba(67,217,162,0.25); }
+
+    .importance-bar {
+      position: absolute;
+      left: 0; top: 8px; bottom: 8px;
+      width: 3px;
+      border-radius: 0 3px 3px 0;
+    }
+    .important .importance-bar { background: var(--important); }
+    .system    .importance-bar { background: var(--system); }
+
+    .sender-avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700;
+      flex-shrink: 0; margin-top: 2px;
+    }
+    .avatar-important { background: rgba(255,107,107,0.25); color: var(--important); }
+    .avatar-system    { background: rgba(74,158,255,0.15); color: var(--system); }
+    .avatar-default   { background: var(--bg-elevated); color: var(--text-secondary); }
+
+    .email-body { flex: 1; min-width: 0; }
+    .email-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+    .sender-name { font-weight: 600; font-size: 13px; color: var(--text-primary); }
+    .important .sender-name { color: #ff9494; }
+    .email-time { margin-left: auto; font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+    .email-subject {
+      font-size: 13px; font-weight: 500; color: var(--text-primary);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px;
+    }
+    .email-card.system .email-subject { color: var(--text-secondary); }
+    .email-preview {
+      font-size: 12px; color: var(--text-muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .email-tags { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; align-items: center; }
+    .tag { padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+    .tag-urgent { background: rgba(255,107,107,0.2); color: var(--important); }
+    .tag-prof   { background: rgba(108,99,255,0.2); color: #a89fff; }
+    .tag-manaba { background: rgba(74,158,255,0.15); color: var(--system); }
+    .tag-paiza  { background: rgba(67,217,162,0.15); color: var(--green); }
+    .tag-admin  { background: rgba(255,209,102,0.15); color: var(--yellow); }
+    .tag-new    { background: rgba(108,99,255,0.35); color: #fff; }
+
+    /* Data source badges */
+    .badge-real {
+      display: inline-flex; align-items: center; gap: 3px;
+      background: rgba(67,217,162,0.15);
+      border: 1px solid rgba(67,217,162,0.4);
+      color: var(--green);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 9px; font-weight: 700; letter-spacing: 0.04em;
+    }
+    .badge-sample {
+      display: inline-flex;
+      background: rgba(92,97,124,0.2);
+      color: var(--text-muted);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 9px; font-weight: 600;
+    }
+
+    .unread-dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; flex-shrink: 0; margin-top: 6px; }
+    .read-dot   { width: 8px; height: 8px; flex-shrink: 0; }
+
+    .section-divider {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 4px 4px;
+      font-size: 11px; color: var(--text-muted);
+      font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .section-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    /* ===== Right Panel ===== */
+    .panel {
+      background: var(--bg-surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .panel-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .panel-title { font-size: 14px; font-weight: 700; }
+    .ai-chip {
+      background: var(--accent-glow);
+      border: 1px solid var(--accent);
+      border-radius: 20px;
+      padding: 2px 8px;
+      font-size: 10px; color: #a89fff; font-weight: 600;
+    }
+    .panel-close-btn {
+      margin-left: auto;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 11px; color: var(--text-muted);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .panel-close-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+    .panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .panel-body::-webkit-scrollbar { width: 3px; }
+    .panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* ===== Digest Panel ===== */
+    .digest-header { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+    .digest-card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 14px; }
+    .digest-item { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+    .digest-item:last-child { border-bottom: none; }
+    .digest-icon { font-size: 14px; margin-top: 1px; flex-shrink: 0; }
+    .digest-text { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+    .digest-text strong { color: var(--text-primary); font-weight: 600; }
+
+    .action-needed { background: rgba(255,107,107,0.08); border: 1px solid rgba(255,107,107,0.3); border-radius: var(--radius-md); padding: 12px 14px; }
+    .action-title { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #ff9494; margin-bottom: 8px; }
+    .action-item { display: flex; align-items: flex-start; gap: 6px; padding: 4px 0; font-size: 12px; color: var(--text-secondary); }
+    .action-item::before { content: '→'; color: var(--important); flex-shrink: 0; }
+
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .stat-card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; text-align: center; }
+    .stat-number { font-size: 22px; font-weight: 700; transition: all 0.3s; }
+    .stat-label  { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+    .stat-card.red    .stat-number { color: var(--important); }
+    .stat-card.blue   .stat-number { color: var(--system); }
+    .stat-card.green  .stat-number { color: var(--green); }
+    .stat-card.yellow .stat-number { color: var(--yellow); }
+
+    .notification-card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 14px; }
+    .notif-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid rgba(46,51,80,0.5); font-size: 12px; }
+    .notif-row:last-child { border-bottom: none; }
+    .notif-source { color: var(--system); font-weight: 600; min-width: 60px; }
+    .notif-count  { margin-left: auto; background: var(--bg-base); border-radius: 4px; padding: 1px 6px; font-size: 11px; color: var(--text-muted); }
+
+    .filter-setting { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 14px; }
+    .filter-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; font-size: 12px; color: var(--text-secondary); }
+    .toggle { width: 32px; height: 18px; border-radius: 9px; position: relative; cursor: pointer; transition: background 0.2s; }
+    .toggle.on  { background: var(--accent); }
+    .toggle.off { background: var(--border); }
+    .toggle::after { content: ''; position: absolute; width: 12px; height: 12px; border-radius: 50%; background: white; top: 3px; transition: left 0.2s; }
+    .toggle.on::after  { left: 17px; }
+    .toggle.off::after { left: 3px; }
+
+    /* ===== Email Detail Panel ===== */
+    #detailPanel { display: none; }
+    .detail-from { display: flex; align-items: center; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+    .detail-avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0; }
+    .detail-sender-name { font-weight: 700; font-size: 14px; }
+    .detail-address { font-size: 11px; color: var(--text-muted); }
+    .detail-subject { font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; line-height: 1.4; }
+    .detail-meta { font-size: 11px; color: var(--text-muted); margin-bottom: 14px; }
+    .ai-summary-box { background: var(--accent-glow); border: 1px solid var(--accent); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 12px; }
+    .ai-summary-label { font-size: 10px; font-weight: 700; color: #a89fff; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+    .ai-summary-text { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+    .ai-summary-text strong { color: var(--text-primary); }
+    .detail-body { font-size: 13px; color: var(--text-secondary); line-height: 1.8; white-space: pre-wrap; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 14px; }
+    .detail-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .detail-data-badge { display: inline-flex; align-items: center; gap: 4px; margin-bottom: 10px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .detail-data-badge.real { background: rgba(67,217,162,0.12); border: 1px solid rgba(67,217,162,0.3); color: var(--green); }
+    .detail-data-badge.sample { background: var(--bg-elevated); border: 1px solid var(--border); color: var(--text-muted); }
+
+    .btn { padding: 8px 16px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { filter: brightness(1.15); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-ghost { background: var(--bg-elevated); border: 1px solid var(--border); color: var(--text-secondary); }
+    .btn-ghost:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .btn-danger { background: rgba(255,107,107,0.12); border: 1px solid rgba(255,107,107,0.3); color: var(--important); }
+    .btn-danger:hover { background: rgba(255,107,107,0.2); }
+
+    /* ===== AI Reply Modal ===== */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); width: 560px; max-width: 95vw; box-shadow: 0 20px 60px rgba(0,0,0,0.6); overflow: hidden; animation: slideUp 0.2s ease; }
+    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .modal-header { display: flex; align-items: center; gap: 10px; padding: 16px 20px; border-bottom: 1px solid var(--border); background: var(--accent-glow); }
+    .modal-title { font-weight: 700; font-size: 15px; }
+    .modal-close { margin-left: auto; background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; line-height: 1; }
+    .modal-close:hover { color: var(--text-primary); }
+    .modal-body { padding: 20px; }
+    .draft-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+    .draft-textarea { width: 100%; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; color: var(--text-primary); font-size: 13px; font-family: inherit; line-height: 1.7; resize: vertical; min-height: 200px; outline: none; }
+    .draft-textarea:focus { border-color: var(--accent); }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 20px; border-top: 1px solid var(--border); }
+    .draft-note { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; margin-right: auto; }
+
+    /* ===== Compose Modal ===== */
+    .compose-modal { width: 540px; }
+    .compose-field { margin-bottom: 12px; }
+    .compose-field label { font-size: 11px; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 4px; }
+    .compose-input { width: 100%; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; color: var(--text-primary); font-size: 13px; font-family: inherit; outline: none; }
+    .compose-input:focus { border-color: var(--accent); }
+    .ai-subject-chip { display: inline-flex; align-items: center; gap: 4px; background: var(--accent-glow); border: 1px solid var(--accent); border-radius: 4px; padding: 2px 8px; font-size: 11px; color: #a89fff; cursor: pointer; margin-top: 4px; transition: all 0.15s; }
+    .ai-subject-chip:hover { background: rgba(108,99,255,0.4); }
+
+    /* ===== Import Modal ===== */
+    .import-modal { width: 580px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; }
+    .import-modal .modal-header { background: rgba(67,217,162,0.1); border-bottom-color: rgba(67,217,162,0.2); }
+    .import-tabs { display: flex; gap: 0; padding: 0; border-bottom: 1px solid var(--border); background: var(--bg-elevated); flex-shrink: 0; }
+    .import-tab { padding: 10px 20px; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--text-muted); border: none; background: none; border-bottom: 2px solid transparent; transition: all 0.15s; }
+    .import-tab:hover { color: var(--text-secondary); }
+    .import-tab.active { color: var(--green); border-bottom-color: var(--green); }
+    .import-body { flex: 1; overflow-y: auto; }
+    .import-section { display: none; padding: 16px 20px; }
+    .import-section.active { display: block; }
+    .import-hint { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.6; }
+    .import-hint code { background: var(--bg-elevated); padding: 1px 5px; border-radius: 3px; font-family: monospace; color: var(--text-secondary); font-size: 11px; }
+    .import-textarea { width: 100%; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; color: var(--text-primary); font-size: 12px; font-family: 'Menlo', 'Monaco', monospace; line-height: 1.6; resize: vertical; min-height: 200px; outline: none; }
+    .import-textarea:focus { border-color: var(--green); }
+    .import-textarea::placeholder { color: var(--text-muted); }
+    .file-upload-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .file-upload-btn { display: flex; align-items: center; gap: 6px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 12px; font-size: 12px; color: var(--text-secondary); cursor: pointer; transition: all 0.15s; }
+    .file-upload-btn:hover { border-color: var(--accent); color: var(--text-primary); }
+    .file-name-display { font-size: 11px; color: var(--text-muted); }
+    .import-footer { display: flex; justify-content: flex-end; align-items: center; gap: 8px; padding: 14px 20px; border-top: 1px solid var(--border); flex-shrink: 0; }
+    .import-footer-note { font-size: 11px; color: var(--text-muted); margin-right: auto; }
+
+    /* Analyzing spinner */
+    .spinner {
+      display: inline-block;
+      width: 12px; height: 12px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== Toast ===== */
+    .toast-container { position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 8px; z-index: 200; }
+    .toast { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 18px; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-primary); box-shadow: var(--shadow); animation: toastIn 0.25s ease; min-width: 220px; }
+    .toast.success { border-color: var(--green); }
+    .toast.info    { border-color: var(--accent); }
+    .toast.warning { border-color: var(--yellow); }
+    @keyframes toastIn  { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes toastOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(40px); opacity: 0; } }
+
+    /* ===== Keyboard hint ===== */
+    .kbd-hint { font-size: 10px; color: var(--text-muted); text-align: center; padding: 6px; border-top: 1px solid var(--border); flex-shrink: 0; }
+    .kbd { background: var(--bg-elevated); border-radius: 3px; padding: 1px 5px; border: 1px solid var(--border); }
+
+    .sidebar::-webkit-scrollbar { width: 4px; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* ===== v4: 継続利用バッジ ===== */
+    .v4-badge {
+      background: linear-gradient(135deg, var(--accent), #9c27b0);
+      color: #fff;
+    }
+
+    /* ===== v4: 状態復元バナー ===== */
+    .restore-banner {
+      display: none;
+      align-items: center; gap: 8px;
+      margin: 0 0 4px;
+      padding: 8px 12px;
+      background: var(--accent-glow);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius-sm);
+      font-size: 11px; color: #b3acff;
+      line-height: 1.4;
+    }
+    .restore-banner.visible { display: flex; }
+    .restore-banner .rb-icon { font-size: 14px; flex-shrink: 0; }
+
+    /* ===== v4: 今日やること（AI ToDo） ===== */
+    .todo-card {
+      background: linear-gradient(160deg, rgba(108,99,255,0.10), rgba(156,39,176,0.06));
+      border: 1px solid var(--accent);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+    }
+    .todo-head {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 700; color: #b3acff;
+      margin-bottom: 4px;
+    }
+    .todo-progress-wrap {
+      background: var(--bg-base);
+      border-radius: 4px; height: 6px;
+      overflow: hidden; margin: 8px 0 10px;
+    }
+    .todo-progress-fill {
+      height: 100%; border-radius: 4px;
+      background: linear-gradient(90deg, var(--accent), var(--green));
+      transition: width 0.4s ease;
+    }
+    .todo-progress-label {
+      font-size: 11px; color: var(--text-secondary);
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .todo-progress-label strong { color: var(--text-primary); }
+    .todo-item {
+      display: flex; align-items: flex-start; gap: 9px;
+      padding: 8px 6px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background 0.15s;
+      border-bottom: 1px solid rgba(46,51,80,0.4);
+    }
+    .todo-item:last-child { border-bottom: none; }
+    .todo-item:hover { background: rgba(108,99,255,0.08); }
+    .todo-checkbox {
+      width: 17px; height: 17px; flex-shrink: 0; margin-top: 1px;
+      border: 2px solid var(--text-muted);
+      border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; color: #fff;
+      transition: all 0.15s;
+    }
+    .todo-item.done .todo-checkbox {
+      background: var(--green); border-color: var(--green);
+    }
+    .todo-main { flex: 1; min-width: 0; }
+    .todo-text {
+      font-size: 12px; color: var(--text-primary); line-height: 1.45;
+      transition: all 0.15s;
+    }
+    .todo-item.done .todo-text {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+    .todo-sub {
+      display: flex; align-items: center; gap: 6px;
+      margin-top: 4px; flex-wrap: wrap;
+    }
+    .todo-prio {
+      font-size: 9px; font-weight: 700; letter-spacing: 0.04em;
+      padding: 1px 6px; border-radius: 4px;
+    }
+    .prio-high { background: rgba(255,107,107,0.18); color: var(--important); }
+    .prio-mid  { background: rgba(255,209,102,0.18); color: var(--yellow); }
+    .prio-low  { background: rgba(74,158,255,0.15); color: var(--system); }
+    .todo-deadline { font-size: 10px; color: var(--text-muted); }
+    .todo-source {
+      font-size: 10px; color: var(--text-secondary);
+      cursor: pointer; text-decoration: underline dotted;
+    }
+    .todo-source:hover { color: var(--accent); }
+    .todo-empty {
+      text-align: center; padding: 18px 10px;
+      color: var(--text-muted); font-size: 12px; line-height: 1.6;
+    }
+    .todo-alldone {
+      text-align: center; padding: 14px 10px;
+      color: var(--green); font-size: 12px; font-weight: 600;
+    }
+    .todo-alldone .ad-emoji { font-size: 26px; display: block; margin-bottom: 4px; }
+
+    /* ===== v4: 処理済みメールの見た目 ===== */
+    .email-card.processed { opacity: 0.55; }
+    .email-card.processed .email-subject { text-decoration: line-through; }
+    .badge-done {
+      display: inline-flex; align-items: center; gap: 3px;
+      background: rgba(67,217,162,0.15);
+      color: var(--green);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 9px; font-weight: 700;
+    }
+
+    /* ===== v6: レスポンシブ（スマホ対応 375px〜） ===== */
+    /* ハンバーガー / ダイジェスト / 背景 / 閉じるバーは PC では隠す */
+    .menu-btn, .digest-btn {
+      display: none;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      border-radius: 8px;
+      font-size: 18px; line-height: 1;
+      cursor: pointer;
+      align-items: center; justify-content: center;
+    }
+    .menu-btn:hover, .digest-btn:hover { background: var(--bg-hover); }
+    .drawer-backdrop { display: none; }
+    .panel-mobile-close { display: none; }
+
+    @media (max-width: 768px) {
+      /* グリッドを解除して縦一列に */
+      .app { display: block; height: auto; min-height: 100vh; overflow: visible; }
+
+      /* トップバー：折り返して検索は下段いっぱいに */
+      .topbar {
+        position: sticky; top: 0;
+        height: auto; flex-wrap: wrap;
+        row-gap: 8px; gap: 8px; padding: 10px 12px;
+      }
+      .menu-btn, .digest-btn { display: flex; width: 40px; height: 40px; }
+      .logo { font-size: 15px; }
+      .search-bar { order: 5; flex: 1 1 100%; max-width: none; }
+      .search-bar input { padding-top: 11px; padding-bottom: 11px; }
+      .topbar > .import-btn { padding: 10px 12px; }
+      .ai-badge { display: none; }               /* 省スペースのため状態バッジは非表示 */
+      .topbar-actions { gap: 8px; }
+      .topbar-actions .import-btn { padding: 10px 12px; }
+
+      /* サイドバー：左からスライドするドロワー */
+      .sidebar {
+        position: fixed; top: 0; left: 0; bottom: 0;
+        width: 84%; max-width: 300px; z-index: 60;
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+        box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+        padding-top: 20px;
+      }
+      body.sidebar-open .sidebar { transform: translateX(0); }
+      .drawer-backdrop {
+        display: block; position: fixed; inset: 0;
+        background: rgba(0,0,0,0.55); z-index: 55;
+        opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+      }
+      body.sidebar-open .drawer-backdrop { opacity: 1; pointer-events: auto; }
+
+      /* メイン：ページ全体でスクロール */
+      .main { height: auto; min-height: calc(100vh - 60px); }
+      .main-header { flex-wrap: wrap; row-gap: 8px; padding: 12px 14px; }
+      .main-title { flex: 1 1 100%; }
+      .sort-toggle { order: 2; }
+      .filter-tabs { order: 3; margin-left: 0; flex-wrap: wrap; }
+      .email-list { overflow-y: visible; height: auto; padding: 10px 12px; }
+      .email-card { padding: 14px; }             /* タップ領域を拡大 */
+      .email-subject { white-space: normal; }
+      .kbd-hint { display: none; }               /* キーボード操作案内はスマホでは不要 */
+
+      /* 右パネル：下から全画面オーバーレイ */
+      .panel {
+        position: fixed; inset: 0; z-index: 70;
+        border-left: none;
+        transform: translateY(100%);
+        transition: transform 0.25s ease;
+        overflow-y: auto; -webkit-overflow-scrolling: touch;
+      }
+      body.panel-visible .panel { transform: translateY(0); }
+      .panel-body { overflow: visible; }
+      #detailPanel { height: auto !important; overflow: visible !important; }
+      .panel-mobile-close {
+        display: block; width: 100%;
+        background: var(--bg-elevated); border: none;
+        border-bottom: 1px solid var(--border);
+        color: var(--text-primary);
+        padding: 14px; font-size: 14px; font-weight: 600;
+        cursor: pointer; text-align: left;
+        position: sticky; top: 0; z-index: 5;
+      }
+
+      /* ボタン・モーダルをタップ/画面幅に最適化 */
+      .btn { padding: 12px 18px; font-size: 14px; }
+      .detail-actions .btn { flex: 1 1 auto; }
+      .modal { width: 94vw; max-width: 94vw; }
+      .draft-textarea { min-height: 160px; }
+      .toast-container { left: 12px; right: 12px; bottom: 12px; }
+      .toast { min-width: 0; }
+    }
+
+    /* さらに狭い端末（〜380px）向け微調整 */
+    @media (max-width: 380px) {
+      .logo { font-size: 14px; }
+      .logo .v4-badge { display: none; }
+      .topbar-actions .import-btn { font-size: 11px; padding: 9px 10px; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ===== TOPBAR ===== -->
+  <header class="topbar">
+    <button class="menu-btn" onclick="toggleSidebar()" title="メニュー" aria-label="メニュー">☰</button>
+    <div class="logo">
+      <div class="logo-icon">✦</div>
+      UniFilter AI
+      <span class="v4-badge">v6</span>
+    </div>
+    <div class="search-bar">
+      <span class="search-icon">🔍</span>
+      <input type="text" placeholder="メールを検索… (/ でフォーカス)" id="searchInput" oninput="filterEmails()" />
+    </div>
+    <button class="import-btn" onclick="loadGmail()" id="gmailRefreshBtn" title="Gmail を再取得">🔄 Gmail更新</button>
+    <button class="import-btn" onclick="openImport()">⬆ インポート</button>
+    <div class="topbar-actions">
+      <button class="digest-btn" onclick="openDigestMobile()" title="ダイジェスト" aria-label="ダイジェスト">📊</button>
+      <div class="ai-badge" id="gmailStatus">
+        <div class="ai-dot"></div>
+        Gmail 連携中
+      </div>
+      <a class="import-btn" href="/api/auth/logout" title="ログアウト">ログアウト</a>
+      <div class="avatar" title="ログイン中">G</div>
+    </div>
+  </header>
+
+  <!-- v6: スマホ用ドロワーの背景（タップで閉じる） -->
+  <div class="drawer-backdrop" onclick="closeSidebar()"></div>
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar">
+    <div class="compose-btn" onclick="openCompose()">✏️ 新規メール</div>
+
+    <div class="sidebar-section">メールボックス</div>
+    <div class="nav-item active" onclick="setFilter('all', this)">
+      <span class="nav-icon">📬</span> 受信トレイ
+      <span class="badge" id="badge-all">5</span>
+    </div>
+    <div class="nav-item" onclick="setFilter('important', this)">
+      <span class="nav-icon">⭐</span> 重要メール
+      <span class="badge" id="badge-important">4</span>
+    </div>
+    <div class="nav-item" onclick="setFilter('system', this)">
+      <span class="nav-icon">🤖</span> 自動通知
+      <span class="badge blue" id="badge-system">5</span>
+    </div>
+    <div class="nav-item" onclick="setFilter('sent', this)">
+      <span class="nav-icon">📤</span> 送信済み
+    </div>
+    <div class="nav-item" onclick="setFilter('draft', this)">
+      <span class="nav-icon">📝</span> 下書き
+      <span class="badge gray">2</span>
+    </div>
+
+    <div class="sidebar-section">AI フィルター</div>
+    <div class="nav-item" onclick="setFilter('todo', this)">
+      <span class="nav-icon">🎯</span> 今日やること
+      <span class="badge green" id="badge-todo">0</span>
+    </div>
+    <div class="nav-item" onclick="setFilter('important', this)">
+      <span class="nav-icon">🚨</span> 要返信
+      <span class="badge" id="badge-reply">4</span>
+    </div>
+    <div class="nav-item" onclick="setFilter('deadline', this)">
+      <span class="nav-icon">⏰</span> 期限あり
+      <span class="badge" id="badge-deadline">3</span>
+    </div>
+    <div class="nav-item" onclick="setFilter('processed', this)">
+      <span class="nav-icon">✅</span> 処理済み
+      <span class="badge gray" id="badge-processed">0</span>
+    </div>
+
+    <div class="sidebar-section">📥 実データ</div>
+    <div class="import-stat-card">
+      <div class="import-stat-row">
+        <span class="import-stat-label">取り込み済み</span>
+        <span class="import-stat-num" id="importedCountNum">0件</span>
+      </div>
+    </div>
+    <div class="nav-item" onclick="openImport()" style="color:var(--green);font-size:12px;">
+      <span class="nav-icon">⬆</span> メールを取り込む
+    </div>
+    <div class="nav-item" onclick="toggleSamples()" id="sampleToggleBtn" style="font-size:12px;">
+      <span class="nav-icon">👁</span> サンプルを非表示
+    </div>
+    <div class="nav-item" onclick="clearImported()" style="font-size:12px;color:var(--text-muted);">
+      <span class="nav-icon">🗑</span> 取込データを削除
+    </div>
+    <div class="nav-item" onclick="resetAll()" style="font-size:12px;color:var(--text-muted);">
+      <span class="nav-icon">🔄</span> すべてリセット
+    </div>
+
+    <div class="sidebar-section">⏰ 締切タイムライン</div>
+    <div id="deadlineList">
+      <div class="deadline-item">
+        <div class="deadline-title">情報基礎演習 課題提出</div>
+        <div class="deadline-time">明日 12:00 まで</div>
+        <div class="deadline-bar-wrap"><div class="deadline-bar-fill fill-red" style="width:88%"></div></div>
+      </div>
+      <div class="deadline-item">
+        <div class="deadline-title">就職ガイダンス登録</div>
+        <div class="deadline-time">6/5 (金) 17:00 まで</div>
+        <div class="deadline-bar-wrap"><div class="deadline-bar-fill fill-yellow" style="width:60%"></div></div>
+      </div>
+      <div class="deadline-item">
+        <div class="deadline-title">Webプログラミング 課題</div>
+        <div class="deadline-time">6/10 (水) 23:59 まで</div>
+        <div class="deadline-bar-wrap"><div class="deadline-bar-fill fill-green" style="width:25%"></div></div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">🏷 マイカテゴリ</div>
+    <div id="categoryNav"></div>
+    <div class="nav-item" onclick="openSettings()" style="color:var(--accent);font-size:12px;">
+      <span class="nav-icon">⚙️</span> キーワード振り分け設定
+    </div>
+  </aside>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <main class="main">
+    <div class="main-header">
+      <div class="main-title" id="mainTitle">📬 受信トレイ</div>
+      <div class="sort-toggle" id="sortToggle" title="表示順を切り替え">
+        <button class="sort-opt active" data-sort="importance" onclick="setSort('importance', this)">⭐ 重要度順</button>
+        <button class="sort-opt" data-sort="date" onclick="setSort('date', this)">🕐 新着順</button>
+      </div>
+      <div class="filter-tabs">
+        <div class="filter-tab active" onclick="setTab('all', this)">すべて</div>
+        <div class="filter-tab" onclick="setTab('unread', this)">未読</div>
+        <div class="filter-tab" onclick="setTab('starred', this)">スター付き</div>
+      </div>
+    </div>
+
+    <div class="import-banner" id="importBanner">
+      <span>✦</span>
+      <span id="importBannerText">実データを取り込んでいます…</span>
+    </div>
+
+    <div class="email-list" id="emailList"></div>
+
+    <div class="kbd-hint">
+      <span class="kbd">J</span> 次へ &nbsp; <span class="kbd">K</span> 前へ &nbsp; <span class="kbd">R</span> 返信下書き &nbsp; <span class="kbd">E</span> 既読 &nbsp; <span class="kbd">I</span> インポート &nbsp; <span class="kbd">/</span> 検索
+    </div>
+  </main>
+
+  <!-- ===== RIGHT PANEL ===== -->
+  <aside class="panel">
+    <!-- v6: スマホで全画面表示したパネルを閉じるバー -->
+    <button class="panel-mobile-close" onclick="closeMobilePanel()">✕ 閉じる</button>
+    <!-- Digest (default) -->
+    <div id="digestPanel">
+      <div class="panel-header">
+        <div class="panel-title">📊 今日のダイジェスト</div>
+        <div class="ai-chip">AI 生成</div>
+      </div>
+      <div class="panel-body">
+        <!-- v4: 前回の状態を復元したことを伝えるバナー -->
+        <div class="restore-banner" id="restoreBanner">
+          <span class="rb-icon">💾</span>
+          <span id="restoreBannerText">前回の状態を復元しました。</span>
+        </div>
+
+        <!-- v4: AI が抽出した「今日やること」チェックリスト -->
+        <div>
+          <div class="digest-header">🎯 今日やること（AI 抽出）</div>
+          <div class="todo-card">
+            <div class="todo-progress-label">
+              <span id="todoProgressText">本日のタスク</span>
+              <strong id="todoProgressCount">0/0</strong>
+            </div>
+            <div class="todo-progress-wrap">
+              <div class="todo-progress-fill" id="todoProgressFill" style="width:0%"></div>
+            </div>
+            <div id="todoList"></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="digest-header">📈 統計</div>
+          <div class="stats-grid">
+            <div class="stat-card red">
+              <div class="stat-number" id="stat-important">4</div>
+              <div class="stat-label">要返信</div>
+            </div>
+            <div class="stat-card blue">
+              <div class="stat-number" id="stat-system">5</div>
+              <div class="stat-label">自動通知</div>
+            </div>
+            <div class="stat-card yellow">
+              <div class="stat-number" id="stat-deadline">3</div>
+              <div class="stat-label">期限あり</div>
+            </div>
+            <div class="stat-card green">
+              <div class="stat-number" id="stat-total">9</div>
+              <div class="stat-label">総受信数</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="digest-header">🤖 AI 要約</div>
+          <div class="digest-card" id="digestSummary">
+            <div class="digest-item">
+              <div class="digest-icon">📘</div>
+              <div class="digest-text"><strong>manaba</strong> から通知。「情報基礎演習」課題が更新、提出期限は明日12:00。</div>
+            </div>
+            <div class="digest-item">
+              <div class="digest-icon">💼</div>
+              <div class="digest-text"><strong>paiza / リクナビ</strong> からスカウトとインターン情報。</div>
+            </div>
+            <div class="digest-item">
+              <div class="digest-icon">📧</div>
+              <div class="digest-text"><strong>大学事務局</strong> 重要連絡（就職ガイダンス登録6/5締切）。</div>
+            </div>
+            <div class="digest-item">
+              <div class="digest-icon">👨‍🏫</div>
+              <div class="digest-text"><strong>教員</strong> から直接メール 3 件。田中教授・吉田先生・山田先生より要返信。</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="digest-header">⚙️ AI フィルター設定</div>
+          <div class="filter-setting">
+            <div class="filter-row"><span>manaba 通知を自動整理</span><div class="toggle on" onclick="toggleSwitch(this)"></div></div>
+            <div class="filter-row"><span>paiza スカウトを折りたたむ</span><div class="toggle on" onclick="toggleSwitch(this)"></div></div>
+            <div class="filter-row"><span>期限ワード検出（至急・締切）</span><div class="toggle on" onclick="toggleSwitch(this)"></div></div>
+            <div class="filter-row"><span>未返信リマインド通知</span><div class="toggle off" onclick="toggleSwitch(this)"></div></div>
+            <div class="filter-row"><span>AI 返信ドラフト自動生成</span><div class="toggle on" onclick="toggleSwitch(this)"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Email Detail -->
+    <div id="detailPanel" style="display:none; flex-direction:column; height:100%; overflow:hidden;">
+      <div class="panel-header">
+        <div class="panel-title" id="detailPanelTitle">📧 メール詳細</div>
+        <div class="ai-chip">AI 分析済み</div>
+        <button class="panel-close-btn" onclick="closeDetail()">✕ 閉じる</button>
+      </div>
+      <div class="panel-body">
+        <div id="detailDataBadgeWrap"></div>
+        <div class="detail-from">
+          <div class="detail-avatar" id="detailAvatar"></div>
+          <div>
+            <div class="detail-sender-name" id="detailSenderName"></div>
+            <div class="detail-address" id="detailAddress"></div>
+          </div>
+          <div class="email-time" id="detailTime" style="margin-left:auto"></div>
+        </div>
+        <div class="detail-subject" id="detailSubject"></div>
+        <div class="detail-meta" id="detailMeta"></div>
+        <div class="ai-summary-box">
+          <div class="ai-summary-label">✦ AI 要約</div>
+          <div class="ai-summary-text" id="detailAISummary"></div>
+        </div>
+        <div class="detail-body" id="detailBody"></div>
+        <div class="detail-actions">
+          <button class="btn btn-primary" id="replyBtn" onclick="openReplyDraft()">✍️ AI で返信を作成</button>
+          <button class="btn btn-ghost" id="processBtn" onclick="toggleProcessed()">✓ 処理済みにする</button>
+          <button class="btn btn-ghost" onclick="markRead()">✅ 既読にする</button>
+          <button class="btn btn-danger" onclick="archiveEmail()">📦 アーカイブ</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- ===== IMPORT MODAL ===== -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal import-modal">
+    <div class="modal-header">
+      <span>⬆</span>
+      <div class="modal-title">メールデータをインポート</div>
+      <button class="modal-close" onclick="closeImport()">✕</button>
+    </div>
+
+    <div class="import-tabs">
+      <button class="import-tab active" onclick="switchImportTab('text', this)">📋 テキスト貼り付け</button>
+      <button class="import-tab" onclick="switchImportTab('json', this)">{ } JSON</button>
+      <button class="import-tab" onclick="switchImportTab('csv', this)">📊 CSV</button>
+    </div>
+
+    <div class="import-body">
+      <!-- テキスト貼り付け -->
+      <div class="import-section active" id="import-text">
+        <p class="import-hint">
+          メールをそのままコピーして貼り付けてください。<br>
+          <code>From:</code> <code>Subject:</code> <code>Date:</code> ヘッダーがあれば自動解析、なければ本文として取り込みます。
+        </p>
+        <textarea class="import-textarea" id="importTextarea"
+          placeholder="From: 田中先生 <tanaka@cit.ac.jp>
+Subject: 課題の提出について
+Date: 2026-06-09
+
+青木さん、
+
+課題の提出期限は明日の12:00までです。
+PDF形式でmanabaから提出してください。
+
+田中"></textarea>
+      </div>
+
+      <!-- JSON -->
+      <div class="import-section" id="import-json">
+        <p class="import-hint">
+          JSON 配列を貼り付けるか、.json ファイルをアップロードしてください。<br>
+          キー: <code>from</code> <code>subject</code> <code>date</code> <code>body</code>
+        </p>
+        <div class="file-upload-row">
+          <label class="file-upload-btn" for="jsonFileInput">📂 ファイルを選択</label>
+          <input type="file" id="jsonFileInput" accept=".json,application/json" style="display:none" onchange="handleFileUpload(this,'json')">
+          <span class="file-name-display" id="jsonFileName">選択されていません</span>
+        </div>
+        <textarea class="import-textarea" id="importJsonTextarea" style="min-height:200px;"
+          placeholder='[
+  {
+    "from": "田中先生 <tanaka@cit.ac.jp>",
+    "subject": "課題の提出について",
+    "date": "2026-06-09",
+    "body": "青木さん、\n\n課題の提出期限は明日の12:00までです。"
+  }
+]'></textarea>
+      </div>
+
+      <!-- CSV -->
+      <div class="import-section" id="import-csv">
+        <p class="import-hint">
+          CSV を貼り付けるか、.csv ファイルをアップロードしてください。<br>
+          1行目はヘッダー行: <code>from,subject,date,body</code>
+        </p>
+        <div class="file-upload-row">
+          <label class="file-upload-btn" for="csvFileInput">📂 ファイルを選択</label>
+          <input type="file" id="csvFileInput" accept=".csv,text/csv" style="display:none" onchange="handleFileUpload(this,'csv')">
+          <span class="file-name-display" id="csvFileName">選択されていません</span>
+        </div>
+        <textarea class="import-textarea" id="importCsvTextarea" style="min-height:200px;"
+          placeholder='from,subject,date,body
+田中先生 <tanaka@cit.ac.jp>,課題の提出について,2026-06-09,青木さん。課題の提出期限は明日12:00まで。'></textarea>
+      </div>
+    </div>
+
+    <div class="import-footer">
+      <span class="import-footer-note">✦ AI が自動で分類・要約・返信ドラフトを生成します</span>
+      <button class="btn btn-ghost" onclick="closeImport()">キャンセル</button>
+      <button class="btn btn-primary" id="importActionBtn" onclick="doImport()">✦ AI で取り込む</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== AI REPLY MODAL ===== -->
+<div class="modal-overlay" id="replyModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span>✦</span>
+      <div class="modal-title">AI 返信ドラフト</div>
+      <button class="modal-close" onclick="closeModal('replyModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="draft-label">生成された返信文（編集できます）</div>
+      <textarea class="draft-textarea" id="draftTextarea"></textarea>
+    </div>
+    <div class="modal-footer">
+      <span class="draft-note">⚡ AI が文脈から生成（確認後に送信してください）</span>
+      <button class="btn btn-ghost" onclick="closeModal('replyModal')">キャンセル</button>
+      <button class="btn btn-primary" onclick="sendDraft()">📤 送信する</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== COMPOSE MODAL ===== -->
+<div class="modal-overlay" id="composeModal">
+  <div class="modal compose-modal">
+    <div class="modal-header">
+      <span>✏️</span>
+      <div class="modal-title">新規メール作成</div>
+      <button class="modal-close" onclick="closeModal('composeModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="compose-field">
+        <label>宛先</label>
+        <input class="compose-input" type="text" placeholder="宛先のメールアドレス" id="composeTo" />
+      </div>
+      <div class="compose-field">
+        <label>件名</label>
+        <input class="compose-input" type="text" placeholder="件名を入力…" id="composeSubject" />
+        <div class="ai-subject-chip" onclick="suggestSubject()">✦ AI で件名を提案</div>
+      </div>
+      <div class="compose-field">
+        <label>本文</label>
+        <textarea class="draft-textarea" placeholder="本文を入力…" id="composeBody" style="min-height:160px"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('composeModal')">下書き保存</button>
+      <button class="btn btn-primary" onclick="sendCompose()">📤 送信する</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== v6: キーワード振り分け設定モーダル ===== -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span>🏷</span>
+      <div class="modal-title">キーワード自動振り分け設定</div>
+      <button class="modal-close" onclick="closeModal('settingsModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="import-hint" style="margin-bottom:14px;">
+        登録したキーワードを含むメールを、指定カテゴリへ自動で振り分けます（件名・本文・差出人を検索）。<br>
+        🔒 設定は<strong>このブラウザ内（localStorage）</strong>に保存され、次回アクセス時も維持されます。
+      </p>
+      <div class="filter-add-row">
+        <input class="compose-input" id="newFilterKeyword" placeholder="キーワード（例：課題）" />
+        <input class="compose-input" id="newFilterCategory" placeholder="カテゴリ（例：授業）" list="categoryPresets" />
+        <datalist id="categoryPresets">
+          <option value="授業"></option>
+          <option value="課題"></option>
+          <option value="バイト"></option>
+          <option value="サークル"></option>
+          <option value="就活"></option>
+          <option value="事務局"></option>
+        </datalist>
+        <button class="btn btn-primary" onclick="addFilterRule()">＋ 追加</button>
+      </div>
+      <div class="filter-rule-list" id="filterRuleList"></div>
+    </div>
+    <div class="modal-footer">
+      <span class="draft-note">✏️ 各行のキーワード／カテゴリは直接編集できます</span>
+      <button class="btn btn-ghost" onclick="closeModal('settingsModal')">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TOAST CONTAINER ===== -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ===== SAMPLE EMAIL DATA =====
+const sampleEmails = [
+  {
+    id: 1, isSample: true, type: 'important', unread: true, starred: true,
+    sender: '田中 誠一郎 教授', senderInitial: '田',
+    address: 's-tanaka@cit.ac.jp',
+    subject: '【要確認】プログラミング基礎 — 課題提出についての質問への回答',
+    preview: '先日の質問への回答です。次回講義前に確認しておいてください…',
+    time: '10:42', date: '2026/06/03 10:42',
+    tags: ['要返信'], tagClasses: ['tag-urgent'],
+    body: `青木さん、
+
+先日いただいた課題提出に関するご質問に回答します。
+
+提出形式はPDF形式でお願いします。ファイル名は「学籍番号_氏名_第6回.pdf」としてください。
+
+また、来週の課題についてですが、Pythonのクラスとオブジェクト指向についての演習を予定しています。教科書の第8章を予習しておいてください。
+
+不明点があれば講義後に質問に来てください。
+
+田中 誠一郎`,
+    aiSummary: '<strong>返信必要：</strong>課題はPDF形式・ファイル名「学籍番号_氏名_第6回.pdf」で提出。来週は第8章の予習が必要。',
+    replyDraft: `田中先生、
+
+ご回答いただきありがとうございます。
+
+提出形式についてよく理解できました。「学籍番号_氏名_第6回.pdf」でファイルを用意して、期限内に提出いたします。
+
+来週の課題についても、教科書第8章を予習しておきます。
+
+ご丁寧に対応いただき、ありがとうございました。
+
+青木 恒大
+s24c3002mq@chibatech.ac.jp`,
+  },
+  {
+    id: 2, isSample: true, type: 'important', unread: true, starred: false,
+    sender: '大学事務局 (学務課)', senderInitial: '大',
+    address: 'gakumu@cit.ac.jp',
+    subject: '【重要】2026年度 就職ガイダンス参加登録のお願い（6/5締切）',
+    preview: '対象：3年生・4年生。就職活動に向けて重要な情報をお伝えする機会です…',
+    time: '09:15', date: '2026/06/03 09:15',
+    tags: ['締切あり'], tagClasses: ['tag-admin'],
+    body: `対象学生の皆さんへ
+
+2026年度就職ガイダンスのご案内です。
+
+日時：2026年6月15日（月）13:00〜16:00
+場所：1号館大講義室（1-101）
+対象：3年生・4年生
+
+参加登録は学生ポータルから行ってください。
+登録締切：6月5日（金）17:00
+
+就職活動に向けて非常に重要な情報を提供する機会ですので、必ず参加登録をお願いします。
+
+千葉工業大学 学務課`,
+    aiSummary: '<strong>締切 6/5 (金) 17:00：</strong>就職ガイダンス参加登録が必要。学生ポータルから申込。6/15開催。',
+    replyDraft: '',
+  },
+  {
+    id: 3, isSample: true, type: 'important', unread: false, starred: true,
+    sender: '吉田 彩子 先生', senderInitial: '吉',
+    address: 'a-yoshida@cit.ac.jp',
+    subject: '【ゼミ面談】日程調整のお願い',
+    preview: '来週ゼミ面談を実施したいと思います。以下の日程でご都合はいかがでしょうか…',
+    time: '昨日', date: '2026/06/02 14:30',
+    tags: ['要返信'], tagClasses: ['tag-prof'],
+    body: `青木さん、
+
+来週、ゼミの進捗確認のための面談を実施したいと思います。
+
+候補日をいくつか挙げますので、ご都合の良い日程をお知らせください。
+
+①6月9日（月）13:00〜14:00
+②6月10日（火）15:00〜16:00
+③6月11日（水）10:00〜11:00
+
+場所は私の研究室（7号館302室）を予定しています。
+
+吉田 彩子`,
+    aiSummary: '<strong>返信必要：</strong>①6/9 13:00 ②6/10 15:00 ③6/11 10:00 のどれか希望日を返信。',
+    replyDraft: `吉田先生、
+
+お声がけいただきありがとうございます。
+
+以下の日程でよろしくお願いします。
+
+②6月10日（火）15:00〜16:00
+
+上記で参加いたします。7号館302室に伺います。
+
+どうぞよろしくお願いいたします。
+
+青木 恒大
+s24c3002mq@chibatech.ac.jp`,
+  },
+  {
+    id: 4, isSample: true, type: 'important', unread: true, starred: false,
+    sender: '山田 健二 先生', senderInitial: '山',
+    address: 'k-yamada@cit.ac.jp',
+    subject: '[データベース論] 補講のご連絡',
+    preview: '第11回の補講について詳細をお知らせします。通常の教室ではなく…',
+    time: '08:00', date: '2026/06/03 08:00',
+    tags: [], tagClasses: ['tag-prof'],
+    body: `受講生の皆さんへ
+
+第11回（6月10日）の授業について補講のご連絡をします。
+
+通常の講義室（3号館203）ではなく、10号館301室で実施します。
+時間は変わらず10:40〜12:10です。
+
+試験範囲に関わる重要な内容（トランザクション・ACID特性）を扱いますので、必ず出席してください。
+
+山田 健二`,
+    aiSummary: '6/10 補講は <strong>10号館301室</strong>（通常教室は変更）。試験範囲の重要内容あり。出席必須。',
+    replyDraft: '',
+  },
+  {
+    id: 5, isSample: true, type: 'system', unread: true, starred: false,
+    sender: 'manaba [情報基礎演習]', senderInitial: 'M',
+    address: 'noreply@manaba.jp',
+    subject: '[manaba] 情報基礎演習: 課題「第6回 再帰とアルゴリズム」が更新されました',
+    preview: 'コース「情報基礎演習」で課題が公開されました。提出期限: 6/4 12:00',
+    time: '11:00', date: '2026/06/03 11:00',
+    tags: ['締切あり'], tagClasses: ['tag-manaba'],
+    body: `【manaba 自動通知】
+
+コース名：情報基礎演習
+課題名：第6回 再帰とアルゴリズム設計
+提出期限：2026年6月4日（木）12:00
+
+課題の詳細はmanabaポータルからご確認ください。
+
+※このメールは自動送信されています。`,
+    aiSummary: '⏰ <strong>明日 12:00 締切：</strong>情報基礎演習「第6回 再帰とアルゴリズム」。manaba から提出。',
+    replyDraft: '',
+  },
+  {
+    id: 6, isSample: true, type: 'system', unread: true, starred: false,
+    sender: 'manaba [Webプログラミング]', senderInitial: 'M',
+    address: 'noreply@manaba.jp',
+    subject: '[manaba] Webプログラミング: 講義資料が追加されました',
+    preview: '「第10回_React基礎.pdf」が追加されました',
+    time: '10:50', date: '2026/06/03 10:50',
+    tags: [], tagClasses: ['tag-manaba'],
+    body: `【manaba 自動通知】
+
+コース名：Webプログラミング入門
+追加ファイル：第10回_React基礎.pdf
+課題提出期限：2026年6月10日（水）23:59
+
+※このメールは自動送信されています。`,
+    aiSummary: 'Webプログラミング「第10回_React基礎.pdf」が追加。課題締切は <strong>6/10 23:59</strong>。',
+    replyDraft: '',
+  },
+  {
+    id: 7, isSample: true, type: 'system', unread: false, starred: false,
+    sender: 'paiza (スカウト)', senderInitial: 'P',
+    address: 'scout@paiza.jp',
+    subject: '【paiza】株式会社TechStartから新しいスカウトが届いています',
+    preview: 'プログラミングスキルを活かせるインターンシップのご案内',
+    time: '09:30', date: '2026/06/03 09:30',
+    tags: [], tagClasses: ['tag-paiza'],
+    body: `【paiza スカウト通知】
+
+株式会社TechStart様からスカウトが届いています。
+
+職種：バックエンドエンジニア（インターン）
+期間：2026年8月〜9月（2ヶ月）
+報酬：時給1,500円
+
+詳細はpaizaポータルよりご確認ください。
+
+※このメールは自動送信されています。`,
+    aiSummary: 'TechStart社からのスカウト。バックエンドインターン（8〜9月・時給1,500円）。就活関連のため自動整理済み。',
+    replyDraft: '',
+  },
+  {
+    id: 8, isSample: true, type: 'system', unread: false, starred: false,
+    sender: 'manaba [OS演習]', senderInitial: 'M',
+    address: 'noreply@manaba.jp',
+    subject: '[manaba] OS演習: 小テストの結果が公開されました（平均76.4点）',
+    preview: '第8回小テストの採点が完了しました。マイページから確認してください',
+    time: '昨日', date: '2026/06/02 16:00',
+    tags: [], tagClasses: ['tag-manaba'],
+    body: `【manaba 自動通知】
+
+コース名：OS演習
+第8回小テスト採点完了
+クラス平均：76.4点
+
+詳細はmanabaのマイページからご確認ください。
+
+※このメールは自動送信されています。`,
+    aiSummary: 'OS演習 第8回小テスト結果公開。クラス平均76.4点。確認はmanabaから。',
+    replyDraft: '',
+  },
+  {
+    id: 9, isSample: true, type: 'system', unread: false, starred: false,
+    sender: 'リクナビ 2027', senderInitial: 'R',
+    address: 'info@rikunabi.com',
+    subject: 'あなたにおすすめのインターン情報（IT/Web系 5社）',
+    preview: 'サマーインターンシップ情報。応募期限が近いものがあります',
+    time: '2日前', date: '2026/06/01 10:00',
+    tags: [], tagClasses: ['tag-paiza'],
+    body: `【リクナビ 2027 おすすめ情報】
+
+あなたのプロフィールに合ったインターン情報です。
+
+1. 株式会社サイバーエージェント — エンジニアコース（応募6/15まで）
+2. ヤフー株式会社 — データエンジニアコース
+3. 楽天グループ — Webエンジニアコース
+4. フリー株式会社 — バックエンドエンジニア
+5. メルカリ — iOSエンジニアコース
+
+詳細はリクナビポータルよりご確認ください。`,
+    aiSummary: 'IT/Web系インターン5社の案内。サイバーエージェントは <strong>6/15 締切</strong>。就活フォルダに整理済み。',
+    replyDraft: '',
+  },
+];
+
+// ===== MUTABLE EMAIL LIST =====
+let emails = [...sampleEmails];
+
+// ===== STATE =====
+let currentFilter   = 'all';
+let currentTab      = 'all';
+let searchQuery     = '';
+let selectedEmailId = null;
+let selectedIdx     = -1;
+let hideSamples     = false;
+let importedCount   = 0;
+let emailIdCounter  = 1000;
+let activeImportTab = 'text';
+let sortMode        = 'importance'; // v6: 'importance'（重要度順・既定） | 'date'（新着順）
+
+// ===== v4: 永続化（localStorage） =====
+const STORE_KEY = 'unifilter_v4_state';
+let archivedIds = [];      // アーカイブ済みメールID（サンプル含む）
+let didRestore  = false;   // 前回データを復元したか
+
+// ===== v4: 状態の保存 / 復元 =====
+// 取り込んだメール本体・既読/スター/処理済みの状態・アーカイブ・サンプル表示設定を
+// すべてブラウザ内（localStorage）に保存し、再訪時に前回の続きから使えるようにする。
+function saveState() {
+  try {
+    // v5: Gmail から取得したメール本体は localStorage に保存しない（毎回サーバから取り直す＝本文をブラウザにも溜めない）。
+    //     既読/スター/処理済みの軽量な状態だけを id で保存し、再訪時に復元する。
+    const imported = emails.filter(e => !e.isSample && !e.isGmail);
+    const states = {};
+    emails.forEach(e => {
+      states[e.id] = { unread: e.unread, starred: e.starred, processed: !!e.processed };
+    });
+    const payload = {
+      v: 4,
+      imported,
+      states,
+      archivedIds,
+      hideSamples,
+      emailIdCounter,
+      sortMode,
+      savedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(STORE_KEY, JSON.stringify(payload));
+  } catch (err) {
+    // localStorage 不可（プライベートモード等）でもアプリは動作させる
+    console.warn('保存に失敗しました', err);
+  }
+}
+
+function loadState() {
+  let payload = null;
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) payload = JSON.parse(raw);
+  } catch (err) {
+    console.warn('復元に失敗しました', err);
+  }
+  if (!payload) return null;
+
+  // 取り込みメールを復元
+  if (Array.isArray(payload.imported) && payload.imported.length) {
+    payload.imported.forEach(e => { e.isSample = false; emails.push(e); });
+    importedCount = payload.imported.length;
+  }
+  if (typeof payload.emailIdCounter === 'number') {
+    emailIdCounter = Math.max(emailIdCounter, payload.emailIdCounter);
+  }
+  if (Array.isArray(payload.archivedIds)) archivedIds = payload.archivedIds;
+  if (typeof payload.hideSamples === 'boolean') hideSamples = payload.hideSamples;
+  if (payload.sortMode === 'date' || payload.sortMode === 'importance') sortMode = payload.sortMode;
+
+  // アーカイブ済みを除外
+  if (archivedIds.length) {
+    emails = emails.filter(e => !archivedIds.includes(e.id));
+    importedCount = emails.filter(e => !e.isSample).length;
+  }
+
+  // 既読/スター/処理済みの状態を適用
+  if (payload.states) {
+    emails.forEach(e => {
+      const s = payload.states[e.id];
+      if (s) {
+        e.unread    = s.unread;
+        e.starred   = s.starred;
+        e.processed = !!s.processed;
+      }
+    });
+  }
+
+  didRestore = !!(payload.imported && payload.imported.length) ||
+               (payload.states && Object.values(payload.states).some(s => s.processed));
+  return payload;
+}
+
+// ===== RENDER =====
+function getFiltered() {
+  let f = hideSamples ? emails.filter(e => !e.isSample) : emails;
+  if (currentFilter === 'important') f = f.filter(e => e.type === 'important');
+  if (currentFilter === 'system')    f = f.filter(e => e.type === 'system');
+  if (currentFilter === 'deadline')  f = f.filter(e => e.tags.some(t => t.includes('締切') || t.includes('返信')));
+  if (currentFilter === 'todo')      f = f.filter(e => isActionable(e) && !e.processed);
+  if (currentFilter === 'processed') f = f.filter(e => e.processed);
+  if (currentFilter.startsWith('cat:')) {
+    const cat = currentFilter.slice(4);
+    f = f.filter(e => matchCategory(e) === cat);
+  }
+  if (currentTab === 'unread')    f = f.filter(e => e.unread);
+  if (currentTab === 'starred')   f = f.filter(e => e.starred);
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    f = f.filter(e =>
+      e.sender.toLowerCase().includes(q) ||
+      e.subject.toLowerCase().includes(q) ||
+      e.preview.toLowerCase().includes(q)
+    );
+  }
+  return f;
+}
+
+// v6: メールの日時を比較可能なタイムスタンプに変換（Gmailの RFC2822・サンプルの "2026/06/03 10:42"・
+//     取り込みの "2026-06-09" や "2026年6月9日" 等の混在フォーマットを吸収する）
+function toTimestamp(e) {
+  const raw = e && e.date ? String(e.date) : '';
+  if (!raw) return 0;
+  let d = new Date(raw);
+  if (!isNaN(d.getTime())) return d.getTime();
+  const cleaned = raw.replace(/年|月/g, '/').replace(/日/g, '');
+  d = new Date(cleaned);
+  return isNaN(d.getTime()) ? 0 : d.getTime();
+}
+
+function renderEmails() {
+  const list      = document.getElementById('emailList');
+  const filtered  = getFiltered();
+
+  // v6: 新着順モード — 種別グルーピングをやめ、全メールを日時降順のフラット表示にする
+  if (sortMode === 'date') {
+    const sorted = [...filtered].sort((a, b) => toTimestamp(b) - toTimestamp(a));
+    let html = '';
+    if (sorted.length === 0) {
+      const msg = hideSamples && importedCount === 0
+        ? '実データがありません。<br>上の「インポート」ボタンからメールを取り込んでください。'
+        : 'メールが見つかりません';
+      html = `<div style="text-align:center;padding:60px 20px;color:var(--text-muted);">
+        <div style="font-size:40px;margin-bottom:12px;">📭</div>
+        <div>${msg}</div>
+      </div>`;
+    } else {
+      html = `<div class="section-divider">🕐 新着順 — 日時が新しい順 (${sorted.length})</div>`;
+      html += sorted.map(emailCard).join('');
+    }
+    list.innerHTML = html;
+    updateSelectedStyle();
+    updateBadges();
+    return;
+  }
+
+  const imported  = filtered.filter(e => !e.isSample);
+  const important = filtered.filter(e => e.type === 'important');
+  const system    = filtered.filter(e => e.type === 'system');
+
+  let html = '';
+
+  if (imported.length > 0) {
+    const impImportant = imported.filter(e => e.type === 'important');
+    const impSystem    = imported.filter(e => e.type === 'system');
+    const hasGmail = imported.some(e => e.isGmail);
+    const realLabel = hasGmail ? '✦ あなたのメール — Gmail / 取り込み' : '✦ 実データ — 取り込み済み';
+    html += `<div class="section-divider">${realLabel} (${imported.length})</div>`;
+    if (impImportant.length) html += impImportant.map(emailCard).join('');
+    if (impSystem.length)    html += impSystem.map(emailCard).join('');
+  }
+
+  if (!hideSamples) {
+    const sampImportant = important.filter(e => e.isSample);
+    const sampSystem    = system.filter(e => e.isSample);
+    if (sampImportant.length > 0) {
+      html += `<div class="section-divider">🚨 重要メール — 人間からの直接連絡 (${sampImportant.length})</div>`;
+      html += sampImportant.map(emailCard).join('');
+    }
+    if (sampSystem.length > 0 && (currentFilter === 'all' || currentFilter === 'system')) {
+      html += `<div class="section-divider">🤖 自動通知 — AI が整理済み (${sampSystem.length})</div>`;
+      html += sampSystem.map(emailCard).join('');
+    }
+  }
+
+  if (filtered.length === 0) {
+    const msg = hideSamples && importedCount === 0
+      ? '実データがありません。<br>上の「インポート」ボタンからメールを取り込んでください。'
+      : 'メールが見つかりません';
+    html = `<div style="text-align:center;padding:60px 20px;color:var(--text-muted);">
+      <div style="font-size:40px;margin-bottom:12px;">📭</div>
+      <div>${msg}</div>
+    </div>`;
+  }
+
+  list.innerHTML = html;
+  updateSelectedStyle();
+  updateBadges();
+}
+
+function emailCard(e) {
+  const typeClass    = e.type === 'important' ? 'important' : 'system';
+  const unreadClass  = e.unread ? 'unread' : '';
+  const avatarClass  = e.type === 'important' ? 'avatar-important' : 'avatar-system';
+  const dotHtml      = e.unread ? `<div class="unread-dot"></div>` : `<div class="read-dot"></div>`;
+  const importedClass = !e.isSample ? 'is-imported' : '';
+  const selectedClass = String(selectedEmailId) === String(e.id) ? 'selected' : '';
+  const processedClass = e.processed ? 'processed' : '';
+  const dataBadge    = !e.isSample
+    ? `<span class="badge-real">✦ 実データ</span>`
+    : `<span class="badge-sample">サンプル</span>`;
+  const doneBadge    = e.processed ? `<span class="badge-done">✓ 処理済み</span>` : '';
+  const tagsHtml = e.tagClasses.map((cls, i) =>
+    `<span class="tag ${cls}">${e.tags[i] || ''}</span>`
+  ).join('');
+  // v6: キーワード振り分けで一致したカテゴリをチップ表示
+  const cat = matchCategory(e);
+  let catHtml = '';
+  if (cat) {
+    const c = categoryColor(cat);
+    catHtml = `<span class="tag tag-cat" style="background:${c.bg};color:${c.fg};border:1px solid ${c.border}">🏷 ${escHtml(cat)}</span>`;
+  }
+
+  return `
+    <div class="email-card ${typeClass} ${unreadClass} ${importedClass} ${selectedClass} ${processedClass}" id="card-${e.id}" onclick="selectEmail('${e.id}')">
+      <div class="importance-bar"></div>
+      <div class="sender-avatar ${avatarClass}">${e.senderInitial}</div>
+      <div class="email-body">
+        <div class="email-meta">
+          <div class="sender-name">${escHtml(e.sender)}</div>
+          <div class="email-time">${e.time}</div>
+        </div>
+        <div class="email-subject">${escHtml(e.subject)}</div>
+        <div class="email-preview">${escHtml(e.preview)}</div>
+        <div class="email-tags">${dataBadge}${doneBadge}${catHtml}${tagsHtml}</div>
+      </div>
+      ${dotHtml}
+    </div>`;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function updateSelectedStyle() {
+  document.querySelectorAll('.email-card').forEach(c => c.classList.remove('selected'));
+  if (selectedEmailId) {
+    const card = document.getElementById(`card-${selectedEmailId}`);
+    if (card) card.classList.add('selected');
+  }
+}
+
+function updateBadges() {
+  const visible = getFiltered();
+  const unread  = visible.filter(e => e.unread);
+  document.getElementById('badge-all').textContent      = unread.length || '';
+  document.getElementById('badge-important').textContent = visible.filter(e => e.type === 'important').length;
+  document.getElementById('badge-system').textContent    = visible.filter(e => e.type === 'system').length;
+  document.getElementById('badge-reply').textContent     = visible.filter(e => e.tags.includes('要返信')).length;
+  document.getElementById('badge-deadline').textContent  = visible.filter(e => e.tags.includes('締切あり')).length;
+
+  // v4: ToDo / 処理済みは現在のフィルターに依存しない全体数で表示
+  const base = hideSamples ? emails.filter(e => !e.isSample) : emails;
+  document.getElementById('badge-todo').textContent      = base.filter(e => isActionable(e) && !e.processed).length || '';
+  document.getElementById('badge-processed').textContent = base.filter(e => e.processed).length || '';
+}
+
+function updateDigestStats() {
+  const base = hideSamples ? emails.filter(e => !e.isSample) : emails;
+  document.getElementById('stat-important').textContent = base.filter(e => e.type === 'important').length;
+  document.getElementById('stat-system').textContent    = base.filter(e => e.type === 'system').length;
+  document.getElementById('stat-deadline').textContent  = base.filter(e => e.tags.includes('締切あり')).length;
+  document.getElementById('stat-total').textContent     = base.length;
+
+  // v4: AI 抽出の ToDo を再描画
+  renderTodos();
+}
+
+// ===== v4: AI ToDo 抽出エンジン =====
+// インポート済み／サンプルのメールから「要返信」「締切あり」を検出し、
+// 優先度（締切=高／返信=中）を付けて ToDo 化する。完了状態は processed と連動。
+function isActionable(e) {
+  return e.tags.includes('要返信') || e.tags.includes('締切あり');
+}
+
+function extractDeadlineLabel(e) {
+  const hay = ((e.aiSummary || '') + ' ' + (e.body || '')).replace(/<\/?strong>/g, '');
+  const patterns = [
+    /明日\s*\d{1,2}[:：]\d{2}/,
+    /本日中|今日中/,
+    /\d{1,2}月\d{1,2}日\s*[（(][^)）]{0,3}[)）]?\s*\d{0,2}[:：]?\d{0,2}/,
+    /\d{1,2}\/\d{1,2}\s*(?:[（(][^)）]{0,3}[)）])?\s*\d{0,2}[:：]?\d{0,2}/,
+    /\d{4}年\d{1,2}月\d{1,2}日/,
+  ];
+  for (const re of patterns) {
+    const m = hay.match(re);
+    if (m) return m[0].replace(/\s+/g, ' ').trim();
+  }
+  return '';
+}
+
+function shortName(s) {
+  return String(s).split(/[\s　（(]/)[0].slice(0, 14);
+}
+function shortSubject(s) {
+  const cleaned = String(s).replace(/^[【\[][^】\]]*[】\]]/, '').replace(/[【\[\]】]/g, '').trim();
+  return (cleaned || String(s)).slice(0, 20);
+}
+
+function buildTodos() {
+  const base = hideSamples ? emails.filter(e => !e.isSample) : emails;
+  return base.filter(isActionable).map(e => {
+    const hasDeadline = e.tags.includes('締切あり');
+    const needsReply  = e.tags.includes('要返信');
+    let priority = 'low', text = '';
+    if (hasDeadline)      priority = 'high';
+    else if (needsReply)  priority = 'mid';
+
+    if (hasDeadline && needsReply) text = `${shortName(e.sender)} に返信（締切あり）`;
+    else if (hasDeadline)          text = `${shortSubject(e.subject)} を提出・対応`;
+    else                           text = `${shortName(e.sender)} に返信する`;
+
+    return { id: e.id, text, priority, deadline: extractDeadlineLabel(e), done: !!e.processed };
+  }).sort((a, b) => {
+    if (a.done !== b.done) return a.done ? 1 : -1;          // 未完了を上に
+    const rank = { high: 0, mid: 1, low: 2 };
+    return rank[a.priority] - rank[b.priority];             // 優先度順
+  });
+}
+
+function renderTodos() {
+  const list = document.getElementById('todoList');
+  if (!list) return;
+  const todos = buildTodos();
+  const done  = todos.filter(t => t.done).length;
+  const total = todos.length;
+  const pct   = total ? Math.round(done / total * 100) : 0;
+
+  document.getElementById('todoProgressFill').style.width = pct + '%';
+  document.getElementById('todoProgressCount').textContent = `${done}/${total}`;
+  document.getElementById('todoProgressText').textContent =
+    total === 0 ? 'タスクなし' : (done === total ? '今日のタスク完了！' : '残り ' + (total - done) + ' 件');
+
+  if (total === 0) {
+    list.innerHTML = `<div class="todo-empty">📥 対応が必要なタスクはありません。<br>メールを取り込むと AI が自動で抽出します。</div>`;
+    return;
+  }
+
+  let html = todos.map(t => {
+    const prioLabel = t.priority === 'high' ? '優先度 高' : t.priority === 'mid' ? '優先度 中' : '優先度 低';
+    const prioCls   = t.priority === 'high' ? 'prio-high' : t.priority === 'mid' ? 'prio-mid' : 'prio-low';
+    const dl = t.deadline ? `<span class="todo-deadline">⏰ ${escHtml(t.deadline)}</span>` : '';
+    return `
+      <div class="todo-item ${t.done ? 'done' : ''}" onclick="toggleTodo('${t.id}')">
+        <div class="todo-checkbox">${t.done ? '✓' : ''}</div>
+        <div class="todo-main">
+          <div class="todo-text">${escHtml(t.text)}</div>
+          <div class="todo-sub">
+            <span class="todo-prio ${prioCls}">${prioLabel}</span>
+            ${dl}
+            <span class="todo-source" onclick="event.stopPropagation(); jumpToEmail('${t.id}')">メールを開く</span>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  if (done === total) {
+    html += `<div class="todo-alldone"><span class="ad-emoji">🎉</span>今日のタスクはすべて完了！</div>`;
+  }
+  list.innerHTML = html;
+}
+
+function toggleTodo(emailId) {
+  const e = emails.find(x => String(x.id) === String(emailId));
+  if (!e) return;
+  e.processed = !e.processed;
+  if (e.processed) e.unread = false;
+  saveState();
+  renderTodos();
+  renderEmails();
+  showToast(e.processed ? '✅ タスクを完了にしました' : '↩️ 未完了に戻しました',
+            e.processed ? 'success' : 'info');
+}
+
+function jumpToEmail(id) {
+  selectEmail(id);
+  const card = document.getElementById(`card-${id}`);
+  if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// ===== EMAIL DETAIL =====
+function selectEmail(id) {
+  const email = emails.find(e => String(e.id) === String(id));
+  if (!email) return;
+  selectedEmailId = id;
+  updateSelectedStyle();
+
+  const filtered = getFiltered();
+  selectedIdx = filtered.findIndex(e => String(e.id) === String(id));
+  email.unread = false;
+
+  document.getElementById('digestPanel').style.display = 'none';
+  const dp = document.getElementById('detailPanel');
+  dp.style.display = 'flex';
+
+  // v6: スマホでは右パネルを全画面オーバーレイとして開く
+  document.body.classList.add('panel-visible');
+
+  const avatarEl = document.getElementById('detailAvatar');
+  avatarEl.textContent = email.senderInitial;
+  avatarEl.className   = 'detail-avatar ' + (email.type === 'important' ? 'avatar-important' : 'avatar-system');
+
+  document.getElementById('detailSenderName').textContent = email.sender;
+  document.getElementById('detailAddress').textContent    = `<${email.address}>`;
+  document.getElementById('detailTime').textContent       = email.date;
+  document.getElementById('detailSubject').textContent    = email.subject;
+  document.getElementById('detailMeta').textContent       = `宛先: あなた (s24c3002mq@chibatech.ac.jp)`;
+  document.getElementById('detailAISummary').innerHTML    = email.aiSummary || '—';
+  document.getElementById('detailBody').textContent       = email.body;
+
+  // Data badge
+  const badgeWrap = document.getElementById('detailDataBadgeWrap');
+  if (!email.isSample) {
+    badgeWrap.innerHTML = `<div class="detail-data-badge real">✦ 実データ — あなたの本物のメール</div>`;
+  } else {
+    badgeWrap.innerHTML = `<div class="detail-data-badge sample">📋 サンプルデータ</div>`;
+  }
+
+  // Reply button
+  const replyBtn = document.getElementById('replyBtn');
+  replyBtn.style.display = email.type === 'system' ? 'none' : '';
+
+  // v4: 処理済みトグルボタンのラベル更新
+  const procBtn = document.getElementById('processBtn');
+  if (procBtn) {
+    procBtn.textContent = email.processed ? '↩️ 未処理に戻す' : '✓ 処理済みにする';
+  }
+
+  // v4: 既読化を保存し、ToDo を更新
+  saveState();
+  renderTodos();
+}
+
+function closeDetail() {
+  selectedEmailId = null;
+  selectedIdx = -1;
+  document.getElementById('digestPanel').style.display = '';
+  document.getElementById('detailPanel').style.display = 'none';
+  document.body.classList.remove('panel-visible'); // v6: スマホの全画面パネルを閉じる
+  renderEmails();
+}
+
+// ===== v6: スマホ用ナビ（ドロワー & 全画面パネル） =====
+function toggleSidebar() { document.body.classList.toggle('sidebar-open'); }
+function closeSidebar()  { document.body.classList.remove('sidebar-open'); }
+function openDigestMobile() {
+  document.getElementById('digestPanel').style.display = '';
+  document.getElementById('detailPanel').style.display = 'none';
+  document.body.classList.add('panel-visible');
+}
+function closeMobilePanel() {
+  document.body.classList.remove('panel-visible');
+  if (selectedEmailId) closeDetail();
+}
+
+// ===== ACTIONS =====
+function markRead() {
+  const email = emails.find(e => String(e.id) === String(selectedEmailId));
+  if (email) {
+    email.unread = false;
+    saveState();
+    showToast('✅ 既読にしました', 'success');
+    renderEmails();
+    renderTodos();
+    updateSelectedStyle();
+  }
+}
+
+// v4: 選択中メールの処理済み状態をトグル（ToDo・一覧・保存に反映）
+function toggleProcessed() {
+  const email = emails.find(e => String(e.id) === String(selectedEmailId));
+  if (!email) return;
+  email.processed = !email.processed;
+  if (email.processed) email.unread = false;
+  const btn = document.getElementById('processBtn');
+  if (btn) btn.textContent = email.processed ? '↩️ 未処理に戻す' : '✓ 処理済みにする';
+  saveState();
+  renderEmails();
+  renderTodos();
+  updateSelectedStyle();
+  showToast(email.processed ? '✓ 処理済みにしました' : '↩️ 未処理に戻しました',
+            email.processed ? 'success' : 'info');
+}
+
+function archiveEmail() {
+  const idx = emails.findIndex(e => String(e.id) === String(selectedEmailId));
+  if (idx !== -1) {
+    const sender = emails[idx].sender;
+    if (!emails[idx].isSample) importedCount--;
+    archivedIds.push(emails[idx].id);
+    emails.splice(idx, 1);
+    saveState();
+    closeDetail();
+    renderEmails();
+    updateSidebarImportCount();
+    updateDigestStats();
+    showToast(`📦 ${sender} のメールをアーカイブしました`, 'info');
+  }
+}
+
+// ===== REPLY DRAFT =====
+function openReplyDraft() {
+  const email = emails.find(e => String(e.id) === String(selectedEmailId));
+  if (!email) return;
+  const draft = email.replyDraft ||
+    `${email.sender.split(/\s/)[0]}先生、\n\nメールありがとうございます。\n\n内容を確認いたしました。\n\n青木 恒大\ns24c3002mq@chibatech.ac.jp`;
+  document.getElementById('draftTextarea').value = draft;
+  document.getElementById('replyModal').classList.add('open');
+}
+
+function sendDraft() {
+  closeModal('replyModal');
+  const email = emails.find(e => String(e.id) === String(selectedEmailId));
+  showToast(`📤 ${email ? email.sender : ''} へ返信を送信しました`, 'success');
+}
+
+// ===== COMPOSE =====
+function openCompose() {
+  document.getElementById('composeTo').value      = '';
+  document.getElementById('composeSubject').value = '';
+  document.getElementById('composeBody').value    = '';
+  document.getElementById('composeModal').classList.add('open');
+}
+
+function suggestSubject() {
+  const to   = document.getElementById('composeTo').value;
+  const body = document.getElementById('composeBody').value;
+  let suggestion = '【ご確認のお願い】';
+  if (to.includes('tanaka') || body.includes('課題'))    suggestion = '【課題提出】第6回 レポートについて';
+  else if (to.includes('yoshida') || body.includes('面談')) suggestion = '【ゼミ面談】日程についてのご返答';
+  else if (body.includes('質問')) suggestion = '【質問】授業内容について';
+  document.getElementById('composeSubject').value = suggestion;
+  showToast('✦ AI が件名を提案しました', 'info');
+}
+
+function sendCompose() {
+  closeModal('composeModal');
+  showToast('📤 メールを送信しました', 'success');
+}
+
+// ===== v6: キーワード自動振り分けフィルタ =====
+// ユーザーが登録したキーワードを含むメールを、指定カテゴリへ自動で振り分ける。
+// 設定はブラウザの localStorage に保存され、次回アクセス時も維持される（外部サーバ不要）。
+const FILTERS_KEY = 'unifilter_v6_filters';
+let filterRules = [];
+let filterRuleCounter = 0;
+
+// 初回のみ投入するサンプルルール（すべて編集・削除できる）
+const DEFAULT_FILTER_RULES = [
+  { keyword: '課題',     category: '課題' },
+  { keyword: '提出',     category: '課題' },
+  { keyword: 'レポート', category: '課題' },
+  { keyword: 'manaba',   category: '授業' },
+  { keyword: '休講',     category: '授業' },
+  { keyword: 'バイト',   category: 'バイト' },
+  { keyword: 'シフト',   category: 'バイト' },
+  { keyword: 'サークル', category: 'サークル' },
+];
+
+function loadFilters() {
+  let stored = null;
+  try {
+    const raw = localStorage.getItem(FILTERS_KEY);
+    if (raw) stored = JSON.parse(raw);
+  } catch (e) { /* localStorage 不可でも継続 */ }
+  if (Array.isArray(stored)) {
+    filterRules = stored;
+  } else {
+    filterRules = DEFAULT_FILTER_RULES.map(r => ({ id: 'fr_' + (++filterRuleCounter), ...r }));
+    saveFilters();
+  }
+  // id 採番カウンタを最大値に合わせる
+  filterRules.forEach(r => {
+    const n = parseInt(String(r.id).replace('fr_', ''), 10);
+    if (!isNaN(n)) filterRuleCounter = Math.max(filterRuleCounter, n);
+  });
+}
+
+function saveFilters() {
+  try { localStorage.setItem(FILTERS_KEY, JSON.stringify(filterRules)); }
+  catch (e) { console.warn('フィルタ保存に失敗しました', e); }
+}
+
+// メールに一致するカテゴリ（最初に一致したルール）を返す。無ければ null
+function matchCategory(e) {
+  if (!e || !filterRules.length) return null;
+  const hay = ((e.sender || '') + ' ' + (e.address || '') + ' ' +
+               (e.subject || '') + ' ' + (e.body || e.preview || '')).toLowerCase();
+  for (const r of filterRules) {
+    const kw = (r.keyword || '').trim().toLowerCase();
+    if (kw && hay.includes(kw)) return r.category;
+  }
+  return null;
+}
+
+// カテゴリ名から安定した色を生成（同じ名前は常に同じ色）
+function categoryColor(cat) {
+  let h = 0;
+  for (let i = 0; i < cat.length; i++) h = (h * 31 + cat.charCodeAt(i)) % 360;
+  return { bg: `hsla(${h},70%,60%,0.18)`, fg: `hsl(${h},80%,74%)`, border: `hsla(${h},70%,60%,0.5)` };
+}
+
+function distinctCategories() {
+  const seen = [];
+  filterRules.forEach(r => { if (r.category && !seen.includes(r.category)) seen.push(r.category); });
+  return seen;
+}
+
+// サイドバーの「マイカテゴリ」ナビ（各カテゴリの件数付き）を描画
+function renderCategoryNav() {
+  const wrap = document.getElementById('categoryNav');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  const cats = distinctCategories();
+  if (!cats.length) {
+    wrap.innerHTML = `<div style="font-size:11px;color:var(--text-muted);padding:4px 10px;line-height:1.5;">
+      まだカテゴリがありません。<br>下の設定から追加できます。</div>`;
+    return;
+  }
+  const base = hideSamples ? emails.filter(e => !e.isSample) : emails;
+  cats.forEach(cat => {
+    const count = base.filter(e => matchCategory(e) === cat).length;
+    const c = categoryColor(cat);
+    const item = document.createElement('div');
+    item.className = 'nav-item' + (currentFilter === 'cat:' + cat ? ' active' : '');
+    item.innerHTML = `<span class="nav-icon" style="color:${c.fg}">●</span>
+      <span class="cat-label"></span>
+      <span class="badge" style="background:${c.fg};color:#1a1d27">${count}</span>`;
+    item.querySelector('.cat-label').textContent = cat;
+    item.onclick = () => setFilter('cat:' + cat, item);
+    wrap.appendChild(item);
+  });
+}
+
+function refreshFiltersUI() {
+  renderFilterRules();
+  renderCategoryNav();
+  renderEmails();
+}
+
+function openSettings() {
+  renderFilterRules();
+  document.getElementById('settingsModal').classList.add('open');
+}
+
+// 設定モーダル内のルール一覧を描画（各行でキーワード・カテゴリをその場で編集できる）
+function renderFilterRules() {
+  const list = document.getElementById('filterRuleList');
+  if (!list) return;
+  list.innerHTML = '';
+  if (!filterRules.length) {
+    list.innerHTML = `<div style="text-align:center;color:var(--text-muted);padding:20px;font-size:12px;">
+      ルールがありません。上のフォームから追加してください。</div>`;
+    return;
+  }
+  filterRules.forEach(r => {
+    const c = categoryColor(r.category);
+    const row = document.createElement('div');
+    row.className = 'filter-rule-row';
+
+    const kw = document.createElement('input');
+    kw.className = 'frr-input'; kw.value = r.keyword;
+    kw.placeholder = 'キーワード';
+    kw.onchange = () => { r.keyword = kw.value.trim(); saveFilters(); refreshFiltersUI(); };
+
+    const arrow = document.createElement('span');
+    arrow.className = 'frr-arrow'; arrow.textContent = '→';
+
+    const cat = document.createElement('input');
+    cat.className = 'frr-input frr-cat-input'; cat.value = r.category;
+    cat.placeholder = 'カテゴリ'; cat.style.color = c.fg;
+    cat.onchange = () => { r.category = cat.value.trim(); saveFilters(); refreshFiltersUI(); };
+
+    const del = document.createElement('button');
+    del.className = 'frr-del'; del.textContent = '🗑'; del.title = '削除';
+    del.onclick = () => deleteFilterRule(r.id);
+
+    row.append(kw, arrow, cat, del);
+    list.appendChild(row);
+  });
+}
+
+function addFilterRule() {
+  const kwEl  = document.getElementById('newFilterKeyword');
+  const catEl = document.getElementById('newFilterCategory');
+  const keyword  = kwEl.value.trim();
+  const category = catEl.value.trim();
+  if (!keyword || !category) { showToast('キーワードとカテゴリを入力してください', 'warning'); return; }
+  filterRules.push({ id: 'fr_' + (++filterRuleCounter), keyword, category });
+  saveFilters();
+  kwEl.value = ''; catEl.value = '';
+  refreshFiltersUI();
+  showToast(`🏷 「${keyword}」→「${category}」を追加しました`, 'success');
+}
+
+function deleteFilterRule(id) {
+  filterRules = filterRules.filter(r => r.id !== id);
+  saveFilters();
+  // 削除でカテゴリが無くなり、そのカテゴリで絞り込み中なら受信トレイに戻す
+  if (currentFilter.startsWith('cat:') && !distinctCategories().includes(currentFilter.slice(4))) {
+    currentFilter = 'all';
+    document.getElementById('mainTitle').textContent = '📬 受信トレイ';
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    const inbox = document.querySelector('.nav-item');
+    if (inbox) inbox.classList.add('active');
+  }
+  refreshFiltersUI();
+  showToast('ルールを削除しました', 'info');
+}
+
+// ===== MODAL =====
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// ===== FILTERS =====
+function setFilter(filter, el) {
+  currentFilter = filter;
+  selectedEmailId = null;
+  document.getElementById('digestPanel').style.display = '';
+  document.getElementById('detailPanel').style.display = 'none';
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (el) el.classList.add('active');
+  const titles = { all:'📬 受信トレイ', important:'⭐ 重要メール', system:'🤖 自動通知', sent:'📤 送信済み', draft:'📝 下書き', deadline:'⏰ 期限あり', todo:'🎯 今日やること', processed:'✅ 処理済み' };
+  if (filter.startsWith('cat:')) {
+    document.getElementById('mainTitle').textContent = '🏷 ' + filter.slice(4);
+  } else {
+    document.getElementById('mainTitle').textContent = titles[filter] || '📬 受信トレイ';
+  }
+  renderEmails();
+  renderCategoryNav();
+  closeSidebar(); // v6: スマホではフィルタ選択後にドロワーを閉じる
+}
+
+function setTab(tab, el) {
+  currentTab = tab;
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  if (el) el.classList.add('active');
+  renderEmails();
+}
+
+// v6: 表示順の切り替え（重要度順 ⇄ 新着順）。選択は localStorage に保存され次回も維持される
+function setSort(mode, el) {
+  if (mode !== 'date' && mode !== 'importance') return;
+  sortMode = mode;
+  document.querySelectorAll('.sort-opt').forEach(b => b.classList.remove('active'));
+  if (el) {
+    el.classList.add('active');
+  } else {
+    const btn = document.querySelector(`.sort-opt[data-sort="${mode}"]`);
+    if (btn) btn.classList.add('active');
+  }
+  saveState();
+  renderEmails();
+  showToast(mode === 'date' ? '🕐 新着順に切り替えました' : '⭐ 重要度順に切り替えました', 'info');
+}
+
+function filterEmails() {
+  searchQuery = document.getElementById('searchInput').value;
+  renderEmails();
+}
+
+function toggleSwitch(el) {
+  el.classList.toggle('on');
+  el.classList.toggle('off');
+}
+
+// ===== SAMPLE TOGGLE =====
+function toggleSamples() {
+  hideSamples = !hideSamples;
+  const btn = document.getElementById('sampleToggleBtn');
+  btn.innerHTML = hideSamples
+    ? '<span class="nav-icon">👁</span> サンプルを表示'
+    : '<span class="nav-icon">👁</span> サンプルを非表示';
+  saveState();
+  renderEmails();
+  updateDigestStats();
+}
+
+function clearImported() {
+  const count = emails.filter(e => !e.isSample).length;
+  if (count === 0) { showToast('取り込みデータはありません', 'info'); return; }
+  emails = emails.filter(e => e.isSample);
+  importedCount = 0;
+  saveState();
+  updateSidebarImportCount();
+  if (selectedEmailId && !sampleEmails.find(e => String(e.id) === String(selectedEmailId))) {
+    closeDetail();
+  }
+  renderEmails();
+  updateDigestStats();
+  showToast(`🗑 ${count}件の取り込みデータを削除しました`, 'info');
+}
+
+// v4: 保存データを完全消去して初期状態に戻す（デモ用）
+function resetAll() {
+  try { localStorage.removeItem(STORE_KEY); } catch (err) {}
+  emails = [...sampleEmails].map(e => ({ ...e, processed: false }));
+  importedCount = 0;
+  archivedIds = [];
+  hideSamples = false;
+  selectedEmailId = null;
+  closeDetail();
+  const stb = document.getElementById('sampleToggleBtn');
+  if (stb) stb.innerHTML = '<span class="nav-icon">👁</span> サンプルを非表示';
+  document.getElementById('restoreBanner').classList.remove('visible');
+  renderEmails();
+  updateSidebarImportCount();
+  updateDigestStats();
+  showToast('🔄 すべての保存データをリセットしました', 'info');
+}
+
+function updateSidebarImportCount() {
+  const num = emails.filter(e => !e.isSample).length;
+  document.getElementById('importedCountNum').textContent = num + '件';
+}
+
+// ===== IMPORT MODAL =====
+function openImport() {
+  document.getElementById('importModal').classList.add('open');
+}
+
+function closeImport() {
+  document.getElementById('importModal').classList.remove('open');
+  setImportAnalyzing(false);
+}
+
+function switchImportTab(tab, el) {
+  activeImportTab = tab;
+  document.querySelectorAll('.import-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.import-section').forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('import-' + tab).classList.add('active');
+}
+
+function handleFileUpload(input, format) {
+  const file = input.files[0];
+  if (!file) return;
+  const nameEl = document.getElementById(format + 'FileName');
+  if (nameEl) nameEl.textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const id = format === 'json' ? 'importJsonTextarea' : 'importCsvTextarea';
+    document.getElementById(id).value = e.target.result;
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function doImport() {
+  let raws;
+  try {
+    if (activeImportTab === 'text') {
+      const text = document.getElementById('importTextarea').value.trim();
+      if (!text) { showToast('テキストを貼り付けてください', 'warning'); return; }
+      raws = [parseRawEmailText(text)];
+    } else if (activeImportTab === 'json') {
+      const text = document.getElementById('importJsonTextarea').value.trim();
+      if (!text) { showToast('JSONを貼り付けてください', 'warning'); return; }
+      const data = JSON.parse(text);
+      const arr = Array.isArray(data) ? data : [data];
+      raws = arr.map(d => ({
+        from:    d.from    || d.From    || d.sender || '',
+        subject: d.subject || d.Subject || d.title  || '件名なし',
+        date:    d.date    || d.Date    || new Date().toLocaleDateString('ja-JP'),
+        body:    d.body    || d.Body    || d.text   || d.content || '',
+      }));
+    } else {
+      const text = document.getElementById('importCsvTextarea').value.trim();
+      if (!text) { showToast('CSVを貼り付けてください', 'warning'); return; }
+      raws = parseCsv(text);
+    }
+  } catch(err) {
+    showToast('データの形式が正しくありません: ' + err.message, 'warning');
+    return;
+  }
+
+  if (!raws || raws.length === 0) { showToast('取り込めるデータがありません', 'warning'); return; }
+
+  setImportAnalyzing(true);
+  setTimeout(() => {
+    const processed = raws.map(r => analyzeEmailAI(r));
+    processed.forEach(e => emails.unshift(e));
+    importedCount += processed.length;
+    setImportAnalyzing(false);
+
+    // Clear textarea
+    document.getElementById('importTextarea').value    = '';
+    document.getElementById('importJsonTextarea').value = '';
+    document.getElementById('importCsvTextarea').value  = '';
+
+    saveState();
+    closeImport();
+    renderEmails();
+    updateSidebarImportCount();
+    updateDigestStats();
+
+    showToast(`✦ ${processed.length}件を取り込みました — AI分析完了`, 'success');
+
+    // Show banner briefly
+    const banner = document.getElementById('importBanner');
+    document.getElementById('importBannerText').textContent =
+      `${processed.length}件の実データを取り込みました。自動分類・要約・返信ドラフトを生成済み。`;
+    banner.classList.add('visible');
+    setTimeout(() => banner.classList.remove('visible'), 5000);
+  }, 1400);
+}
+
+function setImportAnalyzing(on) {
+  const btn = document.getElementById('importActionBtn');
+  if (on) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> AI が解析中…';
+  } else {
+    btn.disabled = false;
+    btn.innerHTML = '✦ AI で取り込む';
+  }
+}
+
+// ===== PARSING =====
+function parseRawEmailText(text) {
+  const lines = text.split('\n');
+  let from = '', subject = '', date = '';
+  const bodyLines = [];
+  let headerDone = false;
+  let headerFound = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!headerDone) {
+      const mFrom    = line.match(/^From:\s*(.+)/i);
+      const mSubject = line.match(/^Subject:\s*(.+)/i);
+      const mDate    = line.match(/^Date:\s*(.+)/i);
+      if (mFrom)    { from    = mFrom[1].trim();    headerFound = true; continue; }
+      if (mSubject) { subject = mSubject[1].trim();  headerFound = true; continue; }
+      if (mDate)    { date    = mDate[1].trim();     headerFound = true; continue; }
+      if (headerFound && line.trim() === '') { headerDone = true; continue; }
+      if (!headerFound) { bodyLines.push(line); headerDone = true; }
+    } else {
+      bodyLines.push(line);
+    }
+  }
+
+  const body = bodyLines.join('\n').trim() || text.trim();
+  if (!subject) {
+    subject = body.split('\n').find(l => l.trim()) || 'インポートメール';
+    if (subject.length > 60) subject = subject.substring(0, 60) + '…';
+  }
+
+  return {
+    from:    from    || '不明の送信者',
+    subject: subject || '件名なし',
+    date:    date    || new Date().toLocaleDateString('ja-JP'),
+    body,
+  };
+}
+
+function parseCsv(text) {
+  const lines = text.split('\n').filter(l => l.trim());
+  if (lines.length < 2) throw new Error('データが1行しかありません（ヘッダー行 + データ行が必要）');
+
+  const headers = splitCsvLine(lines[0]).map(h => h.trim().toLowerCase());
+  const fromIdx    = headers.findIndex(h => h === 'from' || h === 'sender' || h === '送信者');
+  const subjectIdx = headers.findIndex(h => h === 'subject' || h === '件名');
+  const dateIdx    = headers.findIndex(h => h === 'date' || h === '日付');
+  const bodyIdx    = headers.findIndex(h => h === 'body' || h === 'text' || h === '本文');
+
+  return lines.slice(1).map(line => {
+    const cols = splitCsvLine(line);
+    return {
+      from:    fromIdx    >= 0 ? (cols[fromIdx]    || '').trim() : '不明',
+      subject: subjectIdx >= 0 ? (cols[subjectIdx] || '').trim() : '件名なし',
+      date:    dateIdx    >= 0 ? (cols[dateIdx]    || '').trim() : new Date().toLocaleDateString('ja-JP'),
+      body:    bodyIdx    >= 0 ? (cols[bodyIdx]    || '').trim() : '',
+    };
+  }).filter(r => r.subject && r.subject !== '件名なし');
+}
+
+function splitCsvLine(line) {
+  const result = [];
+  let cur = '', inQuote = false;
+  for (const ch of line) {
+    if (ch === '"')       { inQuote = !inQuote; }
+    else if (ch === ',' && !inQuote) { result.push(cur); cur = ''; }
+    else                  { cur += ch; }
+  }
+  result.push(cur);
+  return result;
+}
+
+// ===== AI ANALYSIS =====
+function analyzeEmailAI(raw) {
+  const fullText = ((raw.subject || '') + ' ' + (raw.body || '')).toLowerCase();
+  const fromLower = (raw.from || '').toLowerCase();
+
+  // Classify: system vs important
+  const systemKw = ['noreply', 'no-reply', 'notification', 'notify', 'manaba', 'paiza', 'rikunabi',
+                    'system@', 'info@', 'support@', 'news@', 'alert@', '自動送信', 'auto'];
+  const isSystem = systemKw.some(kw => fromLower.includes(kw));
+
+  // Urgency detection
+  const urgentKw  = ['締切', '至急', '期限', '提出', '要確認', '重要', '明日', '本日中', '今日中'];
+  const replyKw   = ['返信', 'ご都合', 'いかがでしょ', 'お知らせください', 'お聞きし', '教えてください'];
+  const deadlineKw = ['締切', '期限', 'まで', '〆切', 'deadline'];
+
+  const isUrgent   = urgentKw.some(kw => fullText.includes(kw));
+  const needsReply = !isSystem && replyKw.some(kw => fullText.includes(kw));
+  const hasDeadline = deadlineKw.some(kw => fullText.includes(kw));
+
+  // Extract sender name & initial
+  const emailMatch = raw.from.match(/<([^>]+)>/);
+  const address    = emailMatch ? emailMatch[1].trim() : raw.from.trim();
+  const nameMatch  = raw.from.match(/^([^<@\n]+)/);
+  let senderName   = nameMatch ? nameMatch[1].trim().replace(/["']/g, '') : address.split('@')[0];
+  if (!senderName || senderName.length === 0) senderName = address;
+  const senderInitial = [...senderName][0] || '?';
+
+  // Tags
+  const tags = [], tagClasses = [];
+  if (!isSystem && (isUrgent || needsReply)) { tags.push('要返信');  tagClasses.push('tag-urgent'); }
+  if (hasDeadline)                           { tags.push('締切あり'); tagClasses.push('tag-admin'); }
+  if (isSystem)                              { tags.push('自動通知'); tagClasses.push('tag-manaba'); }
+
+  // AI Summary
+  const summaryParts = [];
+  if (needsReply) summaryParts.push('<strong>返信必要：</strong>');
+  const deadlineMatch = raw.body.match(
+    /(\d{1,2}月\d{1,2}日[^\s。\n]*?(?:まで|締切|期限)|(?:締切|期限)[^\s。\n]*?\d{1,2}月\d{1,2}日|\d{4}年\d{1,2}月\d{1,2}日)/
+  );
+  if (deadlineMatch) summaryParts.push(`⏰ 期限 <strong>${deadlineMatch[1]}</strong>`);
+  const snippet = raw.body.replace(/\n+/g, ' ').substring(0, 80);
+  summaryParts.push(snippet + (raw.body.length > 80 ? '…' : ''));
+
+  // Reply draft
+  const isSensei  = /教授|先生|教員|講師|instructor/i.test(raw.from + senderName);
+  const honorific = isSensei ? '先生' : 'さん';
+  const cleanName = senderName.replace(/教授|先生|教員|講師/g, '').trim() || senderName;
+  const replyDraft = (!isSystem && (needsReply || isUrgent)) ?
+    `${cleanName}${honorific}、\n\nメールありがとうございます。\n\n内容を確認いたしました。\n\n青木 恒大\ns24c3002mq@chibatech.ac.jp` : '';
+
+  // Format time
+  const timeStr = formatImportTime(raw.date);
+
+  return {
+    id: ++emailIdCounter,
+    isSample: false,
+    type: isSystem ? 'system' : 'important',
+    unread: true, starred: false,
+    sender: senderName,
+    senderInitial,
+    address,
+    subject: raw.subject || '件名なし',
+    preview: raw.body.replace(/\n/g, ' ').substring(0, 80),
+    time: timeStr,
+    date: raw.date,
+    tags,
+    tagClasses,
+    body: raw.body || '',
+    aiSummary: summaryParts.join(' '),
+    replyDraft,
+  };
+}
+
+function formatImportTime(dateStr) {
+  if (!dateStr) return '—';
+  try {
+    const d = new Date(dateStr.replace(/年|月/g, '-').replace('日', ''));
+    if (isNaN(d.getTime())) return dateStr;
+    const now = new Date();
+    const diff = now - d;
+    if (diff < 0) return dateStr;
+    if (diff < 86400000)  return d.toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'});
+    if (diff < 172800000) return '昨日';
+    if (diff < 604800000) return d.toLocaleDateString('ja-JP', {month:'numeric', day:'numeric'});
+    return d.toLocaleDateString('ja-JP', {year:'numeric', month:'numeric', day:'numeric'});
+  } catch { return dateStr; }
+}
+
+// ===== KEYBOARD NAVIGATION =====
+document.addEventListener('keydown', e => {
+  const searchFocused = document.activeElement === document.getElementById('searchInput');
+  const modalOpen = document.querySelector('.modal-overlay.open');
+
+  if (e.key === 'Escape') {
+    if (modalOpen) { modalOpen.classList.remove('open'); setImportAnalyzing(false); return; }
+    if (selectedEmailId) { closeDetail(); return; }
+  }
+  if (e.key === '/' && !searchFocused && !modalOpen) {
+    e.preventDefault();
+    document.getElementById('searchInput').focus();
+    return;
+  }
+  if (e.key === 'i' || e.key === 'I') {
+    if (!searchFocused && !modalOpen) { e.preventDefault(); openImport(); return; }
+  }
+  if (searchFocused || modalOpen) return;
+
+  const filtered = getFiltered();
+  if (e.key === 'j' || e.key === 'J') {
+    selectedIdx = Math.min(selectedIdx + 1, filtered.length - 1);
+    if (filtered[selectedIdx]) selectEmail(filtered[selectedIdx].id);
+  }
+  if (e.key === 'k' || e.key === 'K') {
+    selectedIdx = Math.max(selectedIdx - 1, 0);
+    if (filtered[selectedIdx]) selectEmail(filtered[selectedIdx].id);
+  }
+  if ((e.key === 'r' || e.key === 'R') && selectedEmailId) { openReplyDraft(); }
+  if ((e.key === 'e' || e.key === 'E') && selectedEmailId) { markRead(); }
+});
+
+// ===== TOAST =====
+function showToast(msg, type = 'info') {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.style.animation = 'toastOut 0.25s ease forwards';
+    setTimeout(() => toast.remove(), 250);
+  }, 3000);
+}
+
+// ===== v5: Gmail 連携 =====
+// 起動時にログイン状態を確認し、本人の Gmail を readonly で取得して既存の AI 整理を回す。
+// 取得した本文はブラウザ上でのみ扱い、localStorage には保存しない（saveState で isGmail を除外）。
+let savedStates = {};   // 復元した状態マップ（Gmail メールに既読/処理済みを再適用するため）
+
+function setGmailStatus(text) {
+  const el = document.getElementById('gmailStatus');
+  if (el) el.innerHTML = `<div class="ai-dot"></div> ${text}`;
+}
+
+async function initGmail() {
+  try {
+    const me = await (await fetch('/api/auth/me')).json();
+    if (!me.loggedIn) { location.href = '/lectures/lecture10/'; return; }
+  } catch (e) {
+    // /api が無い環境（GitHub Pages 等）ではサンプル/インポートで継続
+    setGmailStatus('オフライン（サンプル表示）');
+    return;
+  }
+  loadGmail();
+}
+
+async function loadGmail() {
+  setGmailStatus('Gmail 取得中…');
+  try {
+    const res = await fetch('/api/gmail/messages');
+    if (res.status === 401) { location.href = '/lectures/lecture10/'; return; }
+    if (!res.ok) { setGmailStatus('取得失敗'); showToast('Gmail の取得に失敗しました', 'error'); return; }
+
+    const data = await res.json();
+    const list = data.messages || [];
+
+    // 再取得時に重複しないよう、既存の Gmail メールを一旦除去してから入れ直す
+    emails = emails.filter(e => !e.isGmail);
+
+    list.forEach(raw => {
+      const mail = analyzeEmailAI({
+        from: raw.from || '',
+        subject: raw.subject || '',
+        body: raw.body || '',
+        date: raw.date || '',
+      });
+      mail.id = 'gmail_' + raw.id;   // メッセージごとに安定した ID（状態保存のキー）
+      mail.isGmail = true;
+      mail.isSample = false;
+      if (archivedIds.includes(mail.id)) return;   // アーカイブ済みは再表示しない
+      const s = savedStates[mail.id];
+      if (s) { mail.unread = s.unread; mail.starred = s.starred; mail.processed = !!s.processed; }
+      emails.unshift(mail);          // 実データを先頭に
+    });
+
+    importedCount = emails.filter(e => !e.isSample).length;
+    setGmailStatus(`Gmail 連携中（${list.length}件）`);
+    showToast(list.length ? `📥 Gmail から ${list.length} 件を取得しました` : '受信トレイにメールがありませんでした',
+              list.length ? 'success' : 'info');
+
+    renderEmails();
+    renderTodos();
+    renderCategoryNav();
+    updateSidebarImportCount();
+    updateDigestStats();
+    saveState();
+  } catch (e) {
+    setGmailStatus('取得失敗');
+    showToast('Gmail の取得に失敗しました', 'error');
+  }
+}
+
+// ===== INIT =====
+// v4: 起動時に前回の状態（取り込み・既読・処理済み・サンプル設定）を localStorage から復元
+const restoredPayload = loadState();
+savedStates = (restoredPayload && restoredPayload.states) || {};
+
+// サンプル表示トグルのラベルを復元状態に合わせる
+if (hideSamples) {
+  const stb = document.getElementById('sampleToggleBtn');
+  if (stb) stb.innerHTML = '<span class="nav-icon">👁</span> サンプルを表示';
+}
+
+// v6: 表示順トグルを復元状態に同期
+document.querySelectorAll('.sort-opt').forEach(b => b.classList.toggle('active', b.dataset.sort === sortMode));
+
+// v6: キーワード振り分けルールを復元
+loadFilters();
+
+renderEmails();
+renderCategoryNav();
+updateSidebarImportCount();
+updateDigestStats();
+
+// v4: 前回データを復元した場合はバナーで知らせる（＝継続利用の前提が伝わる体験）
+if (didRestore) {
+  const banner = document.getElementById('restoreBanner');
+  const imp  = emails.filter(e => !e.isSample).length;
+  const done = emails.filter(e => e.processed).length;
+  document.getElementById('restoreBannerText').innerHTML =
+    `前回の続きから再開しました（取り込み <strong>${imp}</strong> 件 ・ 処理済み <strong>${done}</strong> 件）。`;
+  banner.classList.add('visible');
+}
+
+// v5: ログイン確認 → 自分の Gmail を取得して AI 整理を実行
+initGmail();
+</script>
+</body>
+</html>

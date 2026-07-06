@@ -1,8 +1,8 @@
 {
   "name": "unifilter-ai",
-  "version": "5.0.0",
+  "version": "6.0.0",
   "private": true,
-  "description": "UniFilter AI — 大学生向け AI メールフィルタリングダッシュボード（v5: Gmail リアルタイム連携）",
+  "description": "UniFilter AI — 大学生向け AI メールフィルタリングダッシュボード（v6: 表示順切替・キーワード自動振り分け・スマホ対応）",
   "engines": {
     "node": ">=18"
   }

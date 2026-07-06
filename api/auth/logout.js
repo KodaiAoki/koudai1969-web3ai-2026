@@ -3,6 +3,6 @@ const { serializeCookie, appendCookie } = require('../_lib/google');
 
 module.exports = (req, res) => {
   appendCookie(res, serializeCookie('uf_at', '', { maxAge: 0 }));
-  res.writeHead(302, { Location: '/lectures/lecture9/' });
+  res.writeHead(302, { Location: '/lectures/lecture10/' });
   res.end();
 };

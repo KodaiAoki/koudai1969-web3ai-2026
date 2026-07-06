@@ -3,8 +3,8 @@
 // HttpOnly Cookie に格納する（フロントの JS からは読めない）。
 const { getConfig, parseCookies, serializeCookie, appendCookie } = require('../_lib/google');
 
-const LANDING = '/lectures/lecture9/';
-const DASHBOARD = '/lectures/lecture9/dashboard.html';
+const LANDING = '/lectures/lecture10/';
+const DASHBOARD = '/lectures/lecture10/dashboard.html';
 
 module.exports = async (req, res) => {
   const { clientId, clientSecret, redirectUri } = getConfig();
