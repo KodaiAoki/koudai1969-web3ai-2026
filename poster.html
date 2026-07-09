@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>CHIBATECH PROTOTYPE — UniFilter AI (A4)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="poster.css">
+</head>
+<body>
+<!--
+  印刷: Cmd+P → 用紙: A4 → 向き: 縦 → 余白: なし → 詳細設定 → 背景のグラフィック: ON → PDFに保存
+-->
+
+<div class="poster">
+
+  <!-- ============ HEADER ============ -->
+  <header class="poster__header">
+    <div class="brand">
+      <span class="brand__logo">web3/AI</span>
+      <span class="brand__event">CHIBATECH PROTOTYPE · 2026.07.16</span>
+    </div>
+    <div class="brand__meta">千葉工業大学「総合科学特論 web3・AI概論」</div>
+  </header>
+
+  <!-- ============ HERO ============ -->
+  <section class="hero">
+    <div class="hero__badges">
+      <span class="tag tag--pink">A-1 プロダクト</span>
+      <span class="tag tag--outline">AI メールダッシュボード · Web App</span>
+    </div>
+    <h1 class="hero__title">UniFilter AI</h1>
+    <p class="hero__tagline">
+      <span class="tagline__who">メールに追われる大学生の</span>
+      <span class="tagline__what">「今やるべき連絡」が</span>
+      <span class="tagline__how">開いた瞬間、いちばん上に来る。探さないGmail。</span>
+    </p>
+    <div class="hero__visual">
+      <img src="figures/hero.png" alt="受信トレイが重要度順に並び、AIが今日やることを抽出したUniFilter AIの画面">
+    </div>
+  </section>
+
+  <!-- ============ 01 BUG / 02 SOLUTION ============ -->
+  <div class="two-col">
+    <section class="card card--bug">
+      <h2 class="section__title">
+        <span class="section__num">01</span>
+        <span class="section__name">バグ</span>
+        <span class="section__sub">実際に困ったこと</span>
+        <span class="badge badge--must">必須</span>
+      </h2>
+      <p class="quote quote--bug">
+        「学祭の責任者を任され、溜まったメールを放置していたら、期限内に出すべきGoogleフォームの回答を忘れた」
+      </p>
+      <ul class="bullet-list">
+        <li>役割を任された大学生。連絡が増えるほど、大事な1通が受信箱に埋もれて実害（対応漏れ）につながる。</li>
+        <li>既存のGmailは自分で細かくフィルタ設定する手間がかかり、結局使わず放置してしまう。</li>
+      </ul>
+    </section>
+
+    <section class="card card--solution">
+      <h2 class="section__title">
+        <span class="section__num">02</span>
+        <span class="section__name">解決策 (プロダクト)</span>
+        <span class="section__sub">選んだ形</span>
+        <span class="badge badge--must">必須</span>
+      </h2>
+      <p class="quote quote--solution">
+        開くと、対応すべき連絡が優先度順に並ぶ（自分で仕分け設定をしなくていい）。<br>
+        「探す時間」が省け、締切のあるフォームなど大事な1通を見落としにくくなる。<br>
+        その分、学業や仕事そのものに使える時間と集中が少し増える。
+      </p>
+      <div class="how__visual">
+        <img src="figures/solution.png" alt="マイカテゴリ（課題4・授業1・事務局6）に自動振り分けされた画面">
+      </div>
+    </section>
+  </div>
+
+  <!-- ============ 03 TRACTION (★最重要) ============ -->
+  <section class="traction">
+    <h2 class="section__title traction__title">
+      <span class="section__num">03</span>
+      <span class="section__name">検証実績</span>
+      <span class="section__sub">試して確かめた</span>
+      <span class="badge badge--must">必須</span>
+    </h2>
+
+    <div class="traction__grid">
+      <div class="metric">
+        <span class="metric__num">19</span>
+        <span class="metric__label">実Gmailから同期した件数</span>
+      </div>
+      <div class="metric">
+        <span class="metric__num">11</span>
+        <span class="metric__label">自動で振り分けられた件数</span>
+      </div>
+      <div class="metric">
+        <span class="metric__num">58%</span>
+        <span class="metric__label">自動振り分け率（11/19）</span>
+      </div>
+      <div class="metric">
+        <span class="metric__num">1</span>
+        <span class="metric__label">最初のユーザー（開発者本人＝N1）</span>
+      </div>
+    </div>
+
+    <div class="traction__body">
+      <div class="ba-compare">
+        <div class="ba-side ba-side--before">
+          <span class="ba__label">Before</span>
+          <span class="ba__figure">大量のメールから重要連絡を探す<br>（見落とす不安が常にある）</span>
+        </div>
+        <div class="ba-arrow">→</div>
+        <div class="ba-side ba-side--after">
+          <span class="ba__label">After</span>
+          <span class="ba__figure">「マイカテゴリ」に自動仕分け<br>（課題4・授業1・事務局6）で探さず到達</span>
+        </div>
+      </div>
+      <blockquote class="user-voice">
+        「サークルの重要連絡を見落としていた自分が、最初のユーザー。7/9時点で受信箱19件中11件が自動で仕分けされ、"探す前に見つかる"状態になった。」
+        <cite>— 開発者本人（N1当事者・学祭責任者の経験あり）</cite>
+      </blockquote>
+    </div>
+
+  </section>
+
+  <!-- ============ 04 TECH / 05 LEARNED ============ -->
+  <div class="two-col">
+    <section class="card card--tech">
+      <h2 class="section__title">
+        <span class="section__num">04</span>
+        <span class="section__name">技術構成</span>
+        <span class="section__sub">力仕事は自前、賢さは次の一手で借りる</span>
+        <span class="badge badge--rec">推奨</span>
+      </h2>
+      <div class="tech__arch" style="height:auto;padding:2.5mm 2mm;display:flex;align-items:stretch;justify-content:center;gap:1mm;">
+        <div style="flex:1;text-align:center;background:rgba(0,113,227,0.08);border:1px solid rgba(0,113,227,0.28);border-radius:8px;padding:1.5mm 1mm;">
+          <div style="font-weight:700;font-size:8pt;color:var(--text);">Gmail</div>
+          <div style="font-size:6.5pt;color:var(--text-tertiary);line-height:1.3;margin-top:0.5mm;">① 読み取り専用で<br>安全に接続 (OAuth)</div>
+        </div>
+        <div style="align-self:center;font-size:11pt;color:var(--primary);font-weight:700;">→</div>
+        <div style="flex:1;text-align:center;background:rgba(0,113,227,0.08);border:1px solid rgba(0,113,227,0.28);border-radius:8px;padding:1.5mm 1mm;">
+          <div style="font-weight:700;font-size:8pt;color:var(--text);">自前サーバ (Vercel)</div>
+          <div style="font-size:6.5pt;color:var(--text-tertiary);line-height:1.3;margin-top:0.5mm;">② 取得・本文抽出<br>（保存しない）</div>
+        </div>
+        <div style="align-self:center;font-size:11pt;color:var(--primary);font-weight:700;">→</div>
+        <div style="flex:1;text-align:center;background:rgba(0,113,227,0.08);border:1px solid rgba(0,113,227,0.28);border-radius:8px;padding:1.5mm 1mm;">
+          <div style="font-weight:700;font-size:8pt;color:var(--text);">ブラウザ</div>
+          <div style="font-size:6.5pt;color:var(--text-tertiary);line-height:1.3;margin-top:0.5mm;">③ ルールで分類し<br>優先度順に表示</div>
+        </div>
+      </div>
+      <ul class="tech__stack">
+        <li><code>Google OAuth</code>gmail.readonly のみ要求（送信/削除はしない）。トークンは HttpOnly Cookie 管理</li>
+        <li><code>Gmail API + MIME解析</code>受信トレイを取得し本文を抽出（サーバに保存しない安全設計）</li>
+        <li><code>キーワード辞書＋正規表現</code>カテゴリ振り分け・締切/返信判定で優先度順に整列（分類は自前ルール／LLM連携は 06 次の一手で）</li>
+        <li><code>Vercel</code>ホスティング</li>
+      </ul>
+    </section>
+
+    <section class="card card--learned">
+      <h2 class="section__title">
+        <span class="section__num">05</span>
+        <span class="section__name">失敗と学び</span>
+        <span class="section__sub">失敗は学びのたね</span>
+        <span class="badge badge--must">必須</span>
+      </h2>
+      <div class="learned__block learned__block--failed">
+        <span class="learned__label learned__label--failed">✗ 通用しなかった</span>
+        <p>「誰でも使える公開アプリ」を目指したが、Google連携（OAuth）のセキュリティ制約が厳しく、そのまま公開に踏み切れず断念した。</p>
+      </div>
+      <div class="learned__block learned__block--won">
+        <span class="learned__label learned__label--won">✓ 分かったこと</span>
+        <p>壁にぶつかったら全部を諦めず、優先度を切り替える。「公開」は後回しにし、まず"自分が実用できる形"に集中した。実装前に Claude で方針を固め、妥当な計画を立ててから着手することで手戻りを減らせた。</p>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============ 06 NEXT ============ -->
+  <section class="next">
+    <h2 class="section__title next__title">
+      <span class="section__num">06</span>
+      <span class="section__name">次の一手 (方向転換案)</span>
+      <span class="section__sub">もっとよくしていく</span>
+      <span class="badge badge--rec-strong">強く推奨</span>
+    </h2>
+    <p class="next__body">
+      Claude 等の LLM を組み込み、キーワードに頼らず「メールの意味」で分類する。「サークル」という単語がなくても、集金・出欠・締切の文脈を読んで重要度を判定 → キーワード辞書の限界（登録漏れ・表記ゆれ）を越える。「賢さは借りる」を、設計だけでなく実装で実現するのが次の一歩。
+    </p>
+  </section>
+
+  <!-- ============ FOOTER (顔写真/アバター + QR) ============ -->
+  <footer class="poster__footer">
+    <div class="team">
+      <div class="team__photo">
+        <img src="figures/avatar.png" alt="発表者アバター" style="width:100%;height:100%;object-fit:cover;">
+      </div>
+      <div class="team__info">
+        <div class="team__name-row">
+          <div class="team__name">青木 恒大（Kodai Aoki）</div>
+        </div>
+        <div class="team__affiliation">千葉工業大学 先進工学部 知能メディア工学科 3年</div>
+        <div class="team__contact">s24c3002mq@chibatech.ac.jp</div>
+        <div class="team__pitch">
+          <span class="pitch__label">話したいこと</span>
+          メールの見落としに困った経験、ありませんか？使ってみた感想が欲しいです。
+        </div>
+      </div>
+    </div>
+    <div class="qrs">
+      <div class="qr">
+        <div class="qr__code"><img src="figures/qr_product.png" alt="プロダクトを体験するQR" style="width:100%;height:100%;object-fit:contain;"></div>
+        <span class="qr__label">プロダクト（体験）</span>
+      </div>
+      <div class="qr">
+        <div class="qr__code"><img src="figures/qr_contact.png" alt="連絡先メールのQR" style="width:100%;height:100%;object-fit:contain;"></div>
+        <span class="qr__label">連絡先（メール）</span>
+      </div>
+    </div>
+  </footer>
+
+</div>
+
+</body>
+</html>

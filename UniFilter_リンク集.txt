@@ -1,0 +1,21 @@
+■ UniFilter AI 各種URL（保存用）
+
+【プロダクト（体験用）】
+https://koudai1969-web3ai-2026-b3xk.vercel.app/lectures/lecture10/dashboard.html
+
+【連絡先メール】
+s24c3002mq@chibatech.ac.jp
+
+【QR画像】
+figures/qr_product.png … プロダクト体験用
+figures/qr_contact.png … 連絡先メール用
+
+【ポスター関連ファイル】
+poster.html           … ポスター本体（ブラウザで開いて Cmd+P → A4縦PDF）
+poster_backup.html    … 同じ内容のバックアップ（poster.htmlが消えたらこれをコピーする）
+poster.css            … デザイン（poster.htmlと同じ階層に必要）
+progress.md           … 全内容の記録＋アクションリスト
+figures/              … 画像一式（hero, solution, avatar, QR）
+
+※印刷手順: poster.html をブラウザで開く → Cmd+P → 用紙A4 / 向き縦 / 余白なし
+  → 詳細設定で「背景のグラフィック」ON → PDFに保存
